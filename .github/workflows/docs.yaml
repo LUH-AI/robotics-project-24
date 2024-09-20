@@ -17,7 +17,7 @@ on:
       - main
 
 env:
-  name: Heinrich
+  name: heinrich_template
 
 jobs:
   build-and-deploy:
