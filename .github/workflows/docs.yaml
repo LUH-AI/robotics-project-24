@@ -1,4 +1,6 @@
 name: docs
+permissions:
+    contents: write
 
 on:
   # Manual trigger option in github
