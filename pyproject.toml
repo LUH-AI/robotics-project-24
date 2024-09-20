@@ -34,12 +34,12 @@ classifiers = [
 license = { file = "LICENSE" }
 
 [project.optional-dependencies]
-dev = ["heinrich-template[doc, tooling, test, examples]"]
+dev = ["heinrich-template[docs, tooling, test, examples]"]
 tooling = ["commitizen", "pre-commit", "ruff"]
 
 test = ["pytest", "pytest-coverage", "pytest-cases", "heinrich-template[examples]"]
 examples = []
-doc = [
+docs = [
   "automl_sphinx_theme",
 ]
 
