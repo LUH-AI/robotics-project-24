@@ -1,13 +1,15 @@
 """Console script for heinrich_template."""
+
 from __future__ import annotations
 
 import sys
 
+import hydra
 import memray
 from codecarbon import track_emissions
-import hydra
 
 from heinrich_template import cool_things
+
 
 @hydra.main(version_base=None, config_path="configs", config_name="base")
 @track_emissions(offline=True, country_iso_code="DEU")

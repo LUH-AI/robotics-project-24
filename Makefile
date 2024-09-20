@@ -26,14 +26,12 @@ BROWSER := python -c "$$BROWSER_PYSCRIPT"
 help:
 	@python -c "$$PRINT_HELP_PYSCRIPT" < $(MAKEFILE_LIST)
 
-clean: clean-build clean-pyc clean-test ## remove all build, test, coverage and Python artifacts
+clean: clean-build clean-pyc clean-test clean-docs ## remove all build, test, coverage and Python artifacts
 
 clean-build: ## remove build artifacts
 	rm -fr build/
 	rm -fr dist/
 	rm -fr .eggs/
-	find . -name '*.egg-info' -exec rm -fr {} +
-	find . -name '*.egg' -exec rm -f {} +
 
 clean-pyc: ## remove Python file artifacts
 	find . -name '*.pyc' -exec rm -f {} +
@@ -46,14 +44,21 @@ clean-test: ## remove test and coverage artifacts
 	rm -f .coverage
 	rm -fr htmlcov/
 	rm -fr .pytest_cache
+
+clean-docs: ## remove docs artifacts
+	rm -fr docs/build
+	rm -fr docs/api
+	rm -fr docs/examples
+
 ruff: ## run ruff as a formatter
-	python -m ruff --exit-zero heinrich_template
-	python -m ruff --silent --exit-zero --no-cache --fix heinrich_template
+	uvx ruff format heinrich_template
+	uvx ruff check --silent --exit-zero --no-cache --fix heinrich_template
+	uvx ruff check --exit-zero heinrich_template
 isort:
-	python -m isort heinrich_template tests
+	uvx isort heinrich_template tests
 
 test: ## run tests quickly with the default Python
-	python -m pytest tests
+	uvx pytest tests
 cov-report:
 	coverage html -d coverage_html
 
@@ -69,9 +74,9 @@ docs: ## generate Sphinx HTML documentation, including API docs
 	sphinx-apidoc -o docs/ heinrich_template
 	$(MAKE) -C docs clean
 	$(MAKE) -C docs html
-	$(BROWSER) docs/_build/html/index.html
+
 install: clean ## install the package to the active Python's site-packages
-	pip install -e ".[dev]"
+	uv pip install -e ".[dev]"
 
 check:
 	pre-commit run --all-files

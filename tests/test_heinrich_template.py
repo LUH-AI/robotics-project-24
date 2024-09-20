@@ -4,7 +4,6 @@
 
 import pytest
 
-
 from heinrich_template import heinrich_template
 
 
