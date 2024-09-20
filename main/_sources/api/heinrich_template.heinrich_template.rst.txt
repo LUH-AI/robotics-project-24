@@ -1,0 +1,18 @@
+heinrich\_template.heinrich\_template
+=====================================
+
+.. automodule:: heinrich_template.heinrich_template
+
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      cool_things
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+   
+      HandleTermination
+   
