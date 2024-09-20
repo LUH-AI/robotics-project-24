@@ -1,5 +1,5 @@
-Home
-====
+Home of Heinrich
+================
 
 .. toctree::
    :hidden:
@@ -14,4 +14,4 @@ Home
    faq
 
 
-Lorem ipsum dolor.
+Welcome to the home of Heinrich! Here you will find all the information you need to get started with Heinrich the dog, as well as more advanced usage and troubleshooting tips. If you have any questions, please refer to the FAQ or contact the RL team.
