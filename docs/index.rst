@@ -5,15 +5,13 @@ Home
    :hidden:
    :maxdepth: 2
 
-   installation
-   examples/index
+   getting_started
    basic_usage/index
    advanced_usage/index
-   commands
-   api
-   glossary
+   voice_commands
+   manuals
+   material_list
    faq
-   contributing
 
 
 Lorem ipsum dolor.
