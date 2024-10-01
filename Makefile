@@ -57,17 +57,6 @@ ruff: ## run ruff as a formatter
 isort:
 	uvx isort heinrich_template tests
 
-test: ## run tests quickly with the default Python
-	uvx pytest tests
-cov-report:
-	coverage html -d coverage_html
-
-coverage: ## check code coverage quickly with the default Python
-	coverage run --source heinrich_template -m pytest
-	coverage report -m
-	coverage html
-	$(BROWSER) htmlcov/index.html
-
 docs: ## generate Sphinx HTML documentation, including API docs
 	rm -f docs/heinrich_template.rst
 	rm -f docs/modules.rst
@@ -84,3 +73,41 @@ check:
 format:
 	make ruff
 	make isort
+
+build-lcm:
+	rm -rf lcm/build
+	mkdir lcm/build
+	cd lcm/build && cmake .. && make && sudo make install
+
+update-sdk:
+	rm -rf walk-these-ways-go2/go2_gym_deploy/unitree_sdk2_bin/library/unitree_sdk2/build
+	cd walk-these-ways-go2/go2_gym_deploy/unitree_sdk2_bin/library/unitree_sdk2 && sudo ./install.sh
+	mkdir walk-these-ways-go2/go2_gym_deploy/unitree_sdk2_bin/library/unitree_sdk2/build
+	cd walk-these-ways-go2/go2_gym_deploy/unitree_sdk2_bin/library/unitree_sdk2/build && cmake .. && make
+
+build-go2-lcm:
+	rm -rf walk-these-ways-go2/go2_gym_deploy/build
+	mkdir walk-these-ways-go2/go2_gym_deploy/build
+	cd walk-these-ways-go2/go2_gym_deploy/build && cmake .. && make -j
+
+build-backend: build-lcm update-sdk build-go2-lcm
+
+ping:
+	ping 192.168.123.18
+
+test-lcm:
+	echo "Testing lcm reception. Make sure to shut this down correctly else control will not work."
+	cd walk-these-ways-go2/go2_gym_deploy/build && sudo ./lcm_receive
+
+start-lcm:
+	echo "Starting lcm on eth0. If this is not the correct interface address for Heinrich, manually excecute:"
+	echo "cd walk-these-ways-go2/go2_gym_deploy/build && sudo ./lcm_position_go2 <interface>"
+	echo ""
+	echo "You'll see the correct interface address when running 'make test-lcm'"
+	cd walk-these-ways-go2/go2_gym_deploy/build && sudo ./lcm_position_go2 eth0
+
+deploy-example:
+	cd walk-these-ways-go2/go2_gym_deploy/scripts && python deploy_policy.py
+
+robo-ssh:
+	ssh -X unitree@192.168.123.18
