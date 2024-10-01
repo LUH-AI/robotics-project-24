@@ -8,7 +8,7 @@ import hydra
 import memray
 from codecarbon import track_emissions
 
-from heinrich_template import cool_things
+from training_code import cool_things
 
 
 @hydra.main(version_base=None, config_path="configs", config_name="base")

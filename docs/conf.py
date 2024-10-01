@@ -1,6 +1,6 @@
 import automl_sphinx_theme
 
-from heinrich_template import __copyright__, __author__, __version__
+from training_code import __copyright__, __author__, __version__
 
 
 options = {

@@ -5,7 +5,22 @@
 
 
 Starter code for Heinrich the dog, including all the resources needed for getting started, basic usage and RL deployment.
-: https://luh-ai.github.io/heinrich_template/
+Documentation: https://luh-ai.github.io/heinrich_template/
+
+## Connecting to Heinrich
+
+There are two primary ways of connecting to Heinrich: directly via SSH or via the AI net. The former is meant for deployment while the later is useful for package maintenance and updating.
+For the purposes of deployment, you'll want to connect Heinrich to your computer with an ethernet cable, manually set the IPv4 adress to 192.168.123.51 and network mask to 255.255.255.0 then run:
+
+```bash
+make ping
+```
+
+If you get a positive answer, you can connect via:
+```bash
+make ssh
+```
+The default password is 123.
 
 ## Building the Backend
 
@@ -19,6 +34,7 @@ make build-backend
 Note that you need root rights for this at multiple points during the process!
 
 ## Running Deployment
+
 For deployment, you'll need to start LCM and in a separate terminal run the actual deployment code. First test if LCM is connecting to the Unitree SDK:
 
 ```bash
@@ -37,8 +53,8 @@ Once LCM is listening, open a separate terminal. Here you can now start your dep
 make deploy-example
 ```
 
-## Features
-
-- Documentation in progress
-- TODO: training template
-- TODO: deployment template
+For your own policies, you can put them into 'example_policies' and then run:
+```bash
+python deploy_policy.py
+```
+TODO: policy path should be an argumen

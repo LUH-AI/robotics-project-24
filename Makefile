@@ -95,6 +95,9 @@ build-backend: build-lcm update-sdk build-go2-lcm
 ping:
 	ping 192.168.123.18
 
+ai-ping:
+	ping heinrich
+
 test-lcm:
 	echo "Testing lcm reception. Make sure to shut this down correctly else control will not work."
 	cd walk-these-ways-go2/go2_gym_deploy/build && sudo ./lcm_receive
@@ -109,5 +112,8 @@ start-lcm:
 deploy-example:
 	cd walk-these-ways-go2/go2_gym_deploy/scripts && python deploy_policy.py
 
-robo-ssh:
+ssh:
 	ssh -X unitree@192.168.123.18
+
+ai-ssh:
+	ssh -X unitree@heinrich
