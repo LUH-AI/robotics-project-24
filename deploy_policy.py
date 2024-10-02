@@ -1,9 +1,9 @@
-import glob
 import pickle as pkl
 import lcm
 import sys
 import torch
 from pathlib import Path
+import argparse
 
 sys.path.append('walk-these-ways-go2')
 from go2_gym_deploy.utils.deployment_runner import DeploymentRunner
@@ -13,6 +13,7 @@ from go2_gym_deploy.utils.command_profile import *
 
 import pathlib
 
+# TODO: can we un-hardcode this?
 # lcm多播通信的标准格式
 lc = lcm.LCM("udpm://239.255.76.67:7667?ttl=255")
 
@@ -74,11 +75,18 @@ def make_policy(checkpoint_path):
 
     return policy
 
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--policy_path", type=str, default="example_policies/default")
+    parser.add_argument("--experiment_name", type=str, default="example_experiment")
+    parser.add_argument("--max_vel", type=float, default=2.5)
+    parser.add_argument("--max_yaw_vel", type=float, default=5.0)
+    args = parser.parse_args()
+    return args
 
 if __name__ == '__main__':
-    policy_path = "example_policies/default"
-    experiment_name = "example_experiment"
+    args = parse_args()
 
     # default:
     # max_vel=3.5, max_yaw_vel=5.0
-    load_and_run_policy(policy_path, experiment_name=experiment_name, max_vel=2.5, max_yaw_vel=5.0)
+    load_and_run_policy(args.policy_path, experiment_name=args.experiment_name, max_vel=args.max_vel, max_yaw_vel=args.max_yaw_vel)

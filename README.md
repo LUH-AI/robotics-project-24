@@ -49,12 +49,13 @@ make start-lcm
 This assumes eth0 is the correct interface for your robot. If it isn't this command will fail but print instructions of how to get the correct one.
 
 Once LCM is listening, open a separate terminal. Here you can now start your deployment code, e.g. the Teddy Liao's example policy by running:
+
 ```bash
 make deploy-example
 ```
 
-For your own policies, you can put them into 'example_policies' and then run:
+For your own policies, you can put them into 'examples' and then run:
 ```bash
-python deploy_policy.py
+python deploy_policy.py --policy_path <your_policy_path>
 ```
-TODO: policy path should be an argumen
+TODO: policy path should be an argument

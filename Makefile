@@ -60,7 +60,7 @@ isort:
 docs: ## generate Sphinx HTML documentation, including API docs
 	rm -f docs/heinrich_template.rst
 	rm -f docs/modules.rst
-	sphinx-apidoc -o docs/ heinrich_template
+	sphinx-apidoc -o docs/ training_code
 	$(MAKE) -C docs clean
 	$(MAKE) -C docs html
 

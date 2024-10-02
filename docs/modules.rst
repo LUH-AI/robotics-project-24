@@ -1,7 +1,7 @@
-heinrich_template
-=================
+training_code
+=============
 
 .. toctree::
    :maxdepth: 4
 
-   heinrich_template
+   training_code
