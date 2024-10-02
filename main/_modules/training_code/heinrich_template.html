@@ -4,7 +4,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>heinrich_template.heinrich_template &#8212; Heinrich Documentation 0.1.0 documentation</title>
+    <title>training_code.heinrich_template &#8212; Heinrich Documentation 0.1.0 documentation</title>
     
   <link href="../../_static/css/theme.css" rel="stylesheet">
   <link href="../../_static/css/index.ac9c05f7c49ca1e1f876c6e36360ea26.css" rel="stylesheet">
@@ -154,6 +154,11 @@
      Big Remote
     </a>
    </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../basic_usage/ssh_connection.html">
+     Connecting With Heinrich
+    </a>
+   </li>
   </ul>
  </li>
  <li class="toctree-l1 has-children">
@@ -230,7 +235,7 @@
               
               <div>
                 
-  <h1>Source code for heinrich_template.heinrich_template</h1><div class="highlight"><pre>
+  <h1>Source code for training_code.heinrich_template</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot;Main module.&quot;&quot;&quot;</span>
 
 <span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">annotations</span>
@@ -245,7 +250,7 @@
 
 
 <div class="viewcode-block" id="HandleTermination">
-<a class="viewcode-back" href="../../heinrich_template.html#heinrich_template.heinrich_template.HandleTermination">[docs]</a>
+<a class="viewcode-back" href="../../training_code.html#training_code.heinrich_template.HandleTermination">[docs]</a>
 <span class="k">class</span> <span class="nc">HandleTermination</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;This is a context manager that handles different termination signals.</span>
 <span class="sd">    The comments show how to save a model and optimizer states</span>
@@ -263,7 +268,7 @@
         <span class="k">return</span> <span class="bp">self</span>
 
 <div class="viewcode-block" id="HandleTermination.__exit__">
-<a class="viewcode-back" href="../../heinrich_template.html#heinrich_template.heinrich_template.HandleTermination.__exit__">[docs]</a>
+<a class="viewcode-back" href="../../training_code.html#training_code.heinrich_template.HandleTermination.__exit__">[docs]</a>
     <span class="k">def</span> <span class="fm">__exit__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">exc_type</span><span class="p">,</span> <span class="n">exc_value</span><span class="p">,</span> <span class="n">traceback</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;An exception was raised, so save the model and optimizer states</span>
 <span class="sd">        with an exception tag before re-raising.</span>
@@ -288,7 +293,7 @@
 
 
 <div class="viewcode-block" id="HandleTermination.handle_sigterm">
-<a class="viewcode-back" href="../../heinrich_template.html#heinrich_template.heinrich_template.HandleTermination.handle_sigterm">[docs]</a>
+<a class="viewcode-back" href="../../training_code.html#training_code.heinrich_template.HandleTermination.handle_sigterm">[docs]</a>
     <span class="k">def</span> <span class="nf">handle_sigterm</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">signum</span><span class="p">,</span> <span class="n">frame</span><span class="p">):</span>  <span class="c1"># noqa: ARG002</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Save the model and optimizer states before exiting.&quot;&quot;&quot;</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Saving checkpoint to </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">directory</span><span class="si">}</span><span class="s2">/checkpoint_sigterm.pth&quot;</span><span class="p">)</span>
@@ -303,7 +308,7 @@
 
 
 <div class="viewcode-block" id="cool_things">
-<a class="viewcode-back" href="../../heinrich_template.html#heinrich_template.heinrich_template.cool_things">[docs]</a>
+<a class="viewcode-back" href="../../training_code.html#training_code.heinrich_template.cool_things">[docs]</a>
 <span class="k">def</span> <span class="nf">cool_things</span><span class="p">(</span><span class="n">cfg</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;As the name suggests, this does cool things.&quot;&quot;&quot;</span>
     <span class="k">with</span> <span class="n">HandleTermination</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()):</span>

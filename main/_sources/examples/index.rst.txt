@@ -1,9 +1,9 @@
 :orphan:
 
-# Examples
-
-Examples for your project go here. Having good examples is a nice way of making it easier to use your code!
-
+# Example policies for Heinrich
+This directory contains pre-trained Heinrich policies ready for deployment.
+Currently usable:
+- TODO
 
 
 .. raw:: html
