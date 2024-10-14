@@ -51,11 +51,11 @@ clean-docs: ## remove docs artifacts
 	rm -fr docs/examples
 
 ruff: ## run ruff as a formatter
-	uvx ruff format heinrich_template
-	uvx ruff check --silent --exit-zero --no-cache --fix heinrich_template
-	uvx ruff check --exit-zero heinrich_template
+	uvx ruff format deployment_code training_code
+	uvx ruff check --silent --exit-zero --no-cache --fix deployment_code training_code
+	uvx ruff check --exit-zero deployment_code training_code
 isort:
-	uvx isort heinrich_template tests
+	uvx isort deployment_code training_code
 
 docs: ## generate Sphinx HTML documentation, including API docs
 	rm -f docs/heinrich_template.rst
@@ -64,8 +64,25 @@ docs: ## generate Sphinx HTML documentation, including API docs
 	$(MAKE) -C docs clean
 	$(MAKE) -C docs html
 
-install: clean ## install the package to the active Python's site-packages
-	uv pip install -e ".[dev]"
+install-isaacsim:
+	pip install --upgrade pip
+	pip install torch==2.4.0 --index-url https://download.pytorch.org/whl/cu121
+	pip install isaacsim-rl isaacsim-replicator isaacsim-extscache-physics isaacsim-extscache-kit-sdk isaacsim-extscache-kit isaacsim-app --extra-index-url https://pypi.nvidia.com
+
+install-isaaclab:
+	git submodule update --init --recursive
+	cd training_code/IsaacLab && ./isaaclab.sh --install skrl
+
+install-train: install-isaacsim install-isaaclab 
+
+install-deploy:
+	git submodule update --init --recursive
+	pip install pygame
+	pip install spatialmath-python
+	pip install onnxruntime
+	cd deployment_code/unitree_sdk2/ && mkdir build && cd build && cmake .. && make install
+
+install: clean install-train install-deploy
 
 check:
 	pre-commit run --all-files

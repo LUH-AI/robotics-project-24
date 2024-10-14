@@ -1,0 +1,9 @@
+[submodule "training_code/IsaacLab"]
+	path = training_code/IsaacLab
+	url = https://github.com/isaac-sim/IsaacLab.git
+[submodule "deployment_code/spot-rl-example"]
+	path = deployment_code/spot-rl-example
+	url = https://github.com/boston-dynamics/spot-rl-example.git
+[submodule "deployment_code/unitree_sdk2"]
+	path = deployment_code/unitree_sdk2
+	url = https://github.com/unitreerobotics/unitree_sdk2.git
