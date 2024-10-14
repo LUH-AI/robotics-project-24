@@ -19,7 +19,7 @@ on:
       - main
 
 env:
-  name: heinrich_template
+  name: robotics-project-24
 
 jobs:
   build-and-deploy:
