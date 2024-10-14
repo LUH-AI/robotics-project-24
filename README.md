@@ -1,61 +1,18 @@
-# Home of Heinrich
+# Robotics Project 2024
 
-[![Doc Status](https://github.com/LUH-AI/heinrich_template/actions/workflows/docs.yaml/badge.svg)](https://github.com/LUH-AI/heinrich_template/actions/workflows/docs.yaml)
-[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+This is the code repository for the 2024 RL robotics project at LUHAI. It currently contains starter code and basic documentation, but will be the home of the full project during the semester.
 
+## Project Management
+Project management should be done via the project attached to this repository. Please add all milestones and ToDos, use the team features and set completion targets for all items. This makes progress visible to us and this is how we'll judge your progress.
 
-Starter code for Heinrich the dog, including all the resources needed for getting started, basic usage and RL deployment.
-Documentation: https://luh-ai.github.io/heinrich_template/
+## Robot Documentation
 
-## Connecting to Heinrich
+Information on how to operate Heinrich can be found in the documentation page. These are the basic fact on Heinrich's usage with more advanced concepts like RL deployment not being explicitly stated since there are often multiple options on working with low level control, i.e. ROS. 
+Still, there are some additional manuals linked for a more in-depth look and the code examples should give you insights on how to accomplish your specific goals.
 
-There are two primary ways of connecting to Heinrich: directly via SSH or via the AI net. The former is meant for deployment while the later is useful for package maintenance and updating.
-For the purposes of deployment, you'll want to connect Heinrich to your computer with an ethernet cable, manually set the IPv4 adress to 192.168.123.51 and network mask to 255.255.255.0 then run:
+## Training
+We recommend IsaacLab for training policies in simulation. This is a powerful framework for robotic tasks and contains a model of Heinrich (Unitree GO2). You can use it to create interesting new tasks and use the built-in RL training frameworks to easily find policies.
+IsaacLab has an [extensive documentation](https://isaac-sim.github.io/IsaacLab/index.html) in addition to several utility extensions [on GitHub](https://github.com/isaac-sim).
 
-```bash
-make ping
-```
-
-If you get a positive answer, you can connect via:
-```bash
-make ssh
-```
-The default password is 123.
-
-## Building the Backend
-
-If you simply pull, you should have all executables present. If you can't execute them, you likely need to re-build the backend. This is only possible on aarch64 and x86_64 architectures currently - notably not on Apple computers with ARM chips!
-We bundled all build commands in the makefile such that you only need to run:
-
-```bash
-make build-backend
-```
-
-Note that you need root rights for this at multiple points during the process!
-
-## Running Deployment
-
-For deployment, you'll need to start LCM and in a separate terminal run the actual deployment code. First test if LCM is connecting to the Unitree SDK:
-
-```bash
-make test-lcm
-```
-
-If that looks alright, you can go ahead and start LCM proper:
-
-```bash
-make start-lcm
-```
-This assumes eth0 is the correct interface for your robot. If it isn't this command will fail but print instructions of how to get the correct one.
-
-Once LCM is listening, open a separate terminal. Here you can now start your deployment code, e.g. the Teddy Liao's example policy by running:
-
-```bash
-make deploy-example
-```
-
-For your own policies, you can put them into 'examples' and then run:
-```bash
-python deploy_policy.py --policy_path <your_policy_path>
-```
-TODO: policy path should be an argument
+## Deployment
+There are multiple deployment options for ROS, but the simplest one might be using the [recommended IsaacLab workflow](https://developer.nvidia.com/blog/closing-the-sim-to-real-gap-training-spot-quadruped-locomotion-with-nvidia-isaac-lab/).
