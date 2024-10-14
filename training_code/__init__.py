@@ -1,4 +1,4 @@
-"""Top-level package for heinrich-template."""
+"""Top-level package for robotics course."""
 
 import datetime
 

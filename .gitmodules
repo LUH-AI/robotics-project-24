@@ -1,6 +1,0 @@
-[submodule "walk-these-ways-go2"]
-	path = walk-these-ways-go2
-	url = https://github.com/Teddy-Liao/walk-these-ways-go2.git
-[submodule "lcm"]
-	path = lcm
-	url = https://github.com/lcm-proj/lcm.git

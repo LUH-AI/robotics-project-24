@@ -74,43 +74,11 @@ format:
 	make ruff
 	make isort
 
-build-lcm:
-	rm -rf lcm/build
-	mkdir lcm/build
-	cd lcm/build && cmake .. && make && sudo make install
-
-update-sdk:
-	rm -rf walk-these-ways-go2/go2_gym_deploy/unitree_sdk2_bin/library/unitree_sdk2/build
-	cd walk-these-ways-go2/go2_gym_deploy/unitree_sdk2_bin/library/unitree_sdk2 && sudo ./install.sh
-	mkdir walk-these-ways-go2/go2_gym_deploy/unitree_sdk2_bin/library/unitree_sdk2/build
-	cd walk-these-ways-go2/go2_gym_deploy/unitree_sdk2_bin/library/unitree_sdk2/build && cmake .. && make
-
-build-go2-lcm:
-	rm -rf walk-these-ways-go2/go2_gym_deploy/build
-	mkdir walk-these-ways-go2/go2_gym_deploy/build
-	cd walk-these-ways-go2/go2_gym_deploy/build && cmake .. && make -j
-
-build-backend: build-lcm update-sdk build-go2-lcm
-
 ping:
 	ping 192.168.123.18
 
 ai-ping:
 	ping heinrich
-
-test-lcm:
-	echo "Testing lcm reception. Make sure to shut this down correctly else control will not work."
-	cd walk-these-ways-go2/go2_gym_deploy/build && sudo ./lcm_receive
-
-start-lcm:
-	echo "Starting lcm on eth0. If this is not the correct interface address for Heinrich, manually excecute:"
-	echo "cd walk-these-ways-go2/go2_gym_deploy/build && sudo ./lcm_position_go2 <interface>"
-	echo ""
-	echo "You'll see the correct interface address when running 'make test-lcm'"
-	cd walk-these-ways-go2/go2_gym_deploy/build && sudo ./lcm_position_go2 eth0
-
-deploy-example:
-	cd walk-these-ways-go2/go2_gym_deploy/scripts && python deploy_policy.py
 
 ssh:
 	ssh -X unitree@192.168.123.18
