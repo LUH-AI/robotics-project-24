@@ -18,12 +18,6 @@ HostName login.cluster.uni-hannover.de
 IdentityFile ~/.ssh/your_ssh_key
 IdentitiesOnly yes
 ```
-* You can also directly code on the cluster via VS Code
-  * Install the ssh remote extension Remote - SSH
-  * Press F1 and run the Remote-SSH: Open SSH Host... command
-  * Enter your user and host/IP or your alias in the input box that appears and press enter: username@login.cluster.uni-hannover.de
-  * If prompted, enter your password (not needed for key based authentication)
-  * After you are connected, use File > Open Folder to open a folder on the host
 
 ### File management
 * Only 10GB can be stored in your home directory ($HOME)
@@ -89,3 +83,27 @@ ssh -L 8211:compute_node_hostname:8211 username@login.cluster.uni-hannover.de
 ```
 5. Open your browser (e.g. Chrome) and open the following URL: `http://localhost:8211/streaming/webrtc-client?server=localhost`
    * A black window with a play button should be visible now.
+
+### Remote VS-Code
+1. Open VS-Code on your local machine
+2. Install the ssh remote extension Remote - SSH
+   1. Go to extensions
+   2. Search for Remote-SSH
+   3. Click on the first result and click on install
+3. Press F1 and run the Remote-SSH: Open SSH Host... command
+4. Enter your user and host/IP or your alias in the input box that appears and press enter: username@login.cluster.uni-hannover.de
+5. If prompted, enter your password (not needed for key based authentication)
+6. After you are connected, use File > Open Folder to open a folder on the host (e.g. /bigwork/username/robotics-project-24)
+7. You may have to re-install the python extensions... on your remote VS-code
+   * Go to extensions and click on Install in SSH: ...
+
+
+* **For me running the Isaaclab installation with `./isaaclab.sh --install` lead to the following warning:**
+  * Could not find Isaac Sim VSCode settings: ... . This will result in missing 'python.analysis.extraPaths' in the VSCode settings, which limits the functionality of the Python language server.
+  * You can manually add the paths to your remote VS-code settings:
+    1. Open settings
+    2. Search for `python.analysis.extraPaths`
+    3. Add the following paths (change paths as needed (e.g. username))
+    * /bigwork/username/robotics-project-24/IsaacLab/source/extensions/omni.isaac.lab
+    * /bigwork/username/robotics-project-24/IsaacLab/source/extensions/omni.isaac.lab_assets
+    * /bigwork/username/robotics-project-24/IsaacLab/source/extensions/omni.isaac.lab_tasks
