@@ -39,11 +39,14 @@ pkgs_dirs:
 cache-dir=/bigwork/username/.cache
 ```
 
-### File transfer
+### Github
 * ssh for github access on cluster
   * Create a ssh key on the cluster (https://askubuntu.com/questions/46930/how-can-i-set-up-password-less-ssh-login)
   * Copy the public key from ~/.ssh/your-key.pub
   * Add it to github: settings / ssh and gpg keys / new ssh key
+* Now you can clone the project repo and work with it as usual: `git clone git@github.com:LUH-AI/robotics-project-24.git`
+
+### File transfer
 * File transfer between local machine and cluster with rsync
   * `rsync source target`
   * `-r` option for transferring folders recursively
@@ -73,11 +76,11 @@ LIVESTREAM=1 python source/standalone/tutorials/00_sim/create_empty.py
 ```bash
 LIVESTREAM=2 python source/standalone/tutorials/00_sim/create_empty.py
 ```
-   * **Note**: A connection can be established when the following information is logged: "[INFO]: Setup complete..." (This may take a while ~5 minutes)
+   * **Note**: A connection can be established when the following information is logged: "[INFO]: Setup complete..." (This may take a while ~10-30 minutes)
    * Note: The warning "GLFW initialization failed." can be ignored
    * Note: The compute nodes do not have direct internet access. So, all needed data... has to be pre-downloaded
 4. Establish a ssh connection via port-forwarding from your local machine (-f flag for execution in background)
-   * IsaacSim uses port 8211. For other omniverse applications the ports can be here: https://docs.omniverse.nvidia.com/extensions/latest/ext_livestream/webrtc.html
+   * IsaacSim uses port 8211. For other omniverse applications the ports can be found here: https://docs.omniverse.nvidia.com/extensions/latest/ext_livestream/webrtc.html
 ```bash
 ssh -L 8211:compute_node_hostname:8211 username@login.cluster.uni-hannover.de
 ```
