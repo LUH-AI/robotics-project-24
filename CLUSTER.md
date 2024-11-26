@@ -61,13 +61,28 @@ cache-dir=/bigwork/username/.cache
   * Note: Add the conda loading to your ~/.bashrc file for faster access
   * Note: The verification steps will not work because no gui is accessable
 
-### WebRTC Client
-1. Start an interactive session with the following command. The following command uses a compute node with a single GPU for an hour (for me an NVIDIA RTX A6000 was provided which worked for the basic example. If it does not work the gpu type can be specified with --gres=gpu:gpu_type:number_of_gpus and the amount of RAM with --mem 10GB)
+* IsaacLab Assets Download
+  * The compute nodes do not have direct internet access. Therefore, assets like the unitreeGo2 config have to be downloaded in advance
+  * Download the assets in advance with wget
+  * Create a directory where you want to store your assets with mkdir and go to it with cd (e.g. `simulation/assets/{scenes | robots}`)
+    * UnitreeGo2: wget http://omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/4.2/Isaac/IsaacLab/Robots/Unitree/Go2/go2.usd
+    * Cartpole:
+      * wget http://omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/4.2/Isaac/IsaacLab/Robots/Classic/Cartpole/cartpole.usd
+      * In "./Props" folder: wget http://omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/4.2/Isaac/IsaacLab/Robots/Classic/Cartpole/Props/instanceable_meshes.usd
+      * Additionally, base materials need to be downloaded but might only be downloadable from Launcher app (https://docs.omniverse.nvidia.com/launcher/latest/it-managed-launcher/content_install.html)
+    * Note: vMaterials_2 can be downloaded here: https://developer.nvidia.com/vmaterials (if needed)
+  * The code/configs has to be updated for the new file locations
+  * Note: Configs with updated filepaths can be found in simulation/configs
+
+### WebRTC Client (Still not working with Cluster)
+1. Start an interactive session with the following command. The following command uses a compute node with a single GPU for an hour (for me an NVIDIA RTX A6000 was provided which worked for the basic example. If no valid GPU type is selected, you can start a script with srun and specify the gpu type with --gres=gpu:gpu_type:number_of_gpus and the amount of RAM with --mem 10GB)
 ```bash
-salloc --time=1:00:00 --partition ai,tnt -G 1
+salloc --time=1:00:00 --partition tnt -G 1 --mem 32G
 ```
-2. Type `hostname` to get the name of the used compute node
-3. Start your isaac applications with the LIVESTREAM environment variable (e.g. the dummy example from the verification step of the IsaacLab installation)
+   * only tnt partition is supported for livestreaming: [Livestreaming is not supported when Isaac Sim is run on the A100 GPU](https://docs.omniverse.nvidia.com/isaacsim/latest/installation/manual_livestream_clients.html)
+   * you can verify the gpu type with the command `nvidia-smi`
+1. Type `hostname` to get the name of the used compute node
+2. Start your isaac applications with the LIVESTREAM environment variable (e.g. the dummy example from the verification step of the IsaacLab installation)
    * For Omniverse-Streaming-Client: 
 ```bash
 LIVESTREAM=1 python source/standalone/tutorials/00_sim/create_empty.py
@@ -76,15 +91,19 @@ LIVESTREAM=1 python source/standalone/tutorials/00_sim/create_empty.py
 ```bash
 LIVESTREAM=2 python source/standalone/tutorials/00_sim/create_empty.py
 ```
-   * **Note**: A connection can be established when the following information is logged: "[INFO]: Setup complete..." (This may take a while ~10-30 minutes)
+   * **Note**: A connection can be established when the following information is logged: "[INFO]: Setup complete..." (This may take a while ~10-30 minutes, setting --mem 32G option seems to accelerate it)
    * Note: The warning "GLFW initialization failed." can be ignored
    * Note: The compute nodes do not have direct internet access. So, all needed data... has to be pre-downloaded
-4. Establish a ssh connection via port-forwarding from your local machine (-f flag for execution in background)
+1. Establish a ssh connection via port-forwarding from your local machine (-f flag for execution in background)
    * IsaacSim uses port 8211. For other omniverse applications the ports can be found here: https://docs.omniverse.nvidia.com/extensions/latest/ext_livestream/webrtc.html
 ```bash
 ssh -L 8211:compute_node_hostname:8211 username@login.cluster.uni-hannover.de
 ```
-5. Open your browser (e.g. Chrome) and open the following URL: `http://localhost:8211/streaming/webrtc-client?server=localhost`
+   * Additionally, the port 49100 has to be forwarded for authentication:
+```bash
+ssh -L 49100:compute_node_hostname:49100 username@login.cluster.uni-hannover.de
+```
+1. Open your browser (e.g. Chrome) and open the following URL: `http://localhost:8211/streaming/webrtc-client?server=localhost`
    * A black window with a play button should be visible now.
 
 ### Remote VS-Code
