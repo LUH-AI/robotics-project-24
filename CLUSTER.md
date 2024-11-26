@@ -62,6 +62,7 @@ cache-dir=/bigwork/username/.cache
   * Note: The verification steps will not work because no gui is accessable
 
 * IsaacLab Assets Download
+  * Note: On the branch `feat/robot_model_simulation` in simulation/ is an example structure with assets, configs and a small demo script (only material assets for groundplane are missing)
   * The compute nodes do not have direct internet access. Therefore, assets like the unitreeGo2 config have to be downloaded in advance
   * Download the assets in advance with wget
   * Create a directory where you want to store your assets with mkdir and go to it with cd (e.g. `simulation/assets/{scenes | robots}`)
@@ -71,8 +72,7 @@ cache-dir=/bigwork/username/.cache
       * In "./Props" folder: wget http://omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/4.2/Isaac/IsaacLab/Robots/Classic/Cartpole/Props/instanceable_meshes.usd
       * Additionally, base materials need to be downloaded but might only be downloadable from Launcher app (https://docs.omniverse.nvidia.com/launcher/latest/it-managed-launcher/content_install.html)
     * Note: vMaterials_2 can be downloaded here: https://developer.nvidia.com/vmaterials (if needed)
-  * The code/configs has to be updated for the new file locations
-  * Note: Configs with updated filepaths can be found in simulation/configs
+  * The code/configs may have to be updated for the new file locations
 
 ### WebRTC Client (Still not working with Cluster)
 1. Start an interactive session with the following command. The following command uses a compute node with a single GPU for an hour (for me an NVIDIA RTX A6000 was provided which worked for the basic example. If no valid GPU type is selected, you can start a script with srun and specify the gpu type with --gres=gpu:gpu_type:number_of_gpus and the amount of RAM with --mem 10GB)
