@@ -112,6 +112,6 @@ env  =  RslRlVecEnvWrapper(env)
 ```
 
 ## Training
-
+- basic training scripts for different libraries can be found under IsaacLab\source\standalone\workflows
 ## Sim2Real
 
