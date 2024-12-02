@@ -23,5 +23,5 @@ IsaacLab has an [extensive documentation](https://isaac-sim.github.io/IsaacLab/i
 It is recommended you use the AI partition of the LUIS cluster for training. Please make prepare a list of everyone who needs cluster access during the project preparation phase.
 
 ## Deployment
-
 There are multiple deployment options for ROS, but the simplest one might be using the [recommended IsaacLab workflow](https://developer.nvidia.com/blog/closing-the-sim-to-real-gap-training-spot-quadruped-locomotion-with-nvidia-isaac-lab/).
+
