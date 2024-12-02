@@ -61,7 +61,7 @@ This first part of the installation should be done on the shell, since the Clust
    ```
 ## Graphical interface
 
-![Isaac Gym Setup](../robotics-project-24/figures/instruction_1.png)
+![Isaac Gym Setup](figures/instruction_1.png)
 2. Log into the interactive sessions website of the university cluster:
 https://login.cluster.uni-hannover.de/pun/sys/dashboard/batch_connect/sessions
 2. Navigate to the "Interactive Apps" field and start a new "Cluster Remote Desktop" session.
@@ -99,6 +99,6 @@ https://login.cluster.uni-hannover.de/pun/sys/dashboard/batch_connect/sessions
    * By default, the loaded policy is the last model of the last run of the experiment folder.
    * Other runs/model iteration can be selected by setting `load_run` and `checkpoint` in the train config.
 
-   ![Isaac Gym Setup](../robotics-project-24/figures/instruction_2.png)
+   ![Isaac Gym Setup](figures/instruction_2.png)
    https://github.com/user-attachments/assets/98395d82-d3f6-4548-b6ee-8edfce70ac3e
 
