@@ -79,7 +79,7 @@ https://login.cluster.uni-hannover.de/pun/sys/dashboard/batch_connect/sessions
    ```
 ## Training
    ```
-   python legged_gym/scripts/train.py --task=go2
+   python unitree_rl_gym/legged_gym/scripts/train.py --task=go2
    ```
 
    * To run on CPU add following arguments: `--sim_device=cpu`, `--rl_device=cpu` (sim on CPU and rl on GPU is possible).
@@ -99,7 +99,7 @@ https://login.cluster.uni-hannover.de/pun/sys/dashboard/batch_connect/sessions
 
 ## Inference
    ```
-   python legged_gym/scripts/play.py --task=go2
+   python unitree_rl_gym/legged_gym/scripts/play.py --task=go2
    ```
 
    * By default, the loaded policy is the last model of the last run of the experiment folder.
