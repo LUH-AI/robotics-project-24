@@ -17,17 +17,7 @@ The cluster could be either accessed with a shell via a webbrowser: https://logi
    conda create -n unitree_rl_env python=3.8 -y
    conda activate unitree_rl_env
    ```
-2. Install pytorch 1.10 with cuda-11.3:
-   ```
-   pip install torch==1.10.0+cu113 torchvision==0.11.1+cu113 torchaudio==0.10.0+cu113 -f https://download.pytorch.org/whl/cu113/torch_stable.html
-   pip install --upgrade torch torchvision
-   pip install --upgrade tensorboard
-   pip install setuptools
-   ```
-   Navigate a proper installation directory for the dependencies like the following and replace <username> with the actual username on the cluster:
-   ```
-   cd /bigwork/<username>/user
-   ```
+2. Navigate into the repo, which optimally should be in `$BIGWORK`.
 3. Install Isaac Gym
 
    - Download and install Isaac Gym Preview 4 from [https://developer.nvidia.com/isaac-gym](https://developer.nvidia.com/isaac-gym)
@@ -45,14 +35,15 @@ The cluster could be either accessed with a shell via a webbrowser: https://logi
    cd rsl_rl
    pip install -e .
    ```
-
 5. Install unitree_rl_gym
    ```
    git clone https://github.com/unitreerobotics/unitree_rl_gym
    cd unitree_rl_gym
    pip install -e .
    ```
-6. Export all library paths. This step is sometimes also required after creating a new session:
+6. Install all other dependencies. Go back to the root of the git repository for this.  
+`pip install .`  
+7. Export all library paths. This step is sometimes also required after creating a new session:
    ```
    export LD_LIBRARY_PATH=/bigwork/<username>/.conda/envs/<venv name>/lib:$LD_LIBRARY_PATH
    ```
@@ -64,7 +55,8 @@ https://login.cluster.uni-hannover.de/pun/sys/dashboard/batch_connect/sessions
 2. Navigate to the "Interactive Apps" field and start a new "Cluster Remote Desktop" session.
 3. Select
 * number of hours (eg. 5h)
-* memory per CPU node (32GB)
+* number of cpu cores (e.g. 8)
+* memory per CPU core (so that #cores * memory > 32GB)
 * a single RTX compatible GPU (rtxa6000:1)
 * cluster partition (tnt as the only available)
    - Test isaacsim 
