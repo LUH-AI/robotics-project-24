@@ -6,7 +6,17 @@ This is a simple example of using Unitree Robots for reinforcement learning, inc
 
 ## Installation
 This first part of the installation should be done on the shell, since the Cluster Remote Desktop only allows limited access to the internet for installations.
-
+The cluster could be either accessed with a shell via a webbrowser: https://login.cluster.uni-hannover.de/pun/sys/shell/ssh/127.0.0.1 or via SSH:
+## SSH login
+   Connect to the cluster using Putty or anything similar:
+   ```
+   <username>@login.cluster.uni-hannover.de
+   ```
+   Find the currently active job with the graphical interface:
+   ```
+   squeue --me
+   srun --jobid=<ID> --pty bash --login
+   ```
 1. Create a new python virtual env with python 3.6, 3.7 or 3.8 (3.8 recommended)
    ```
    conda create -n unitree_rl_env python=3.8 -y
@@ -30,15 +40,11 @@ This first part of the installation should be done on the shell, since the Clust
    wget https://developer.nvidia.com/isaac-gym-preview-4
    tar -xvzf isaac-gym-preview-4.tar.gz
    cd isaacgym/python && pip install -e .
-   cd /..
-   cd /..
    ```
-   - Try running an example 
-   ```
-   python isaacgym/python/examples/1080_balls_of_solitude.py
-   ```
+   Export the library paths. This step is sometimes also required after creating a new session:
    ```
    export LD_LIBRARY_PATH=/bigwork/<username>/.conda/envs/unitree_rl_env/lib:$LD_LIBRARY_PATH
+   export LD_LIBRARY_PATH=/bigwork/<username>/.conda/envs/isaacsym/lib:$LD_LIBRARY_PATH
    ```
 4. 
    - For troubleshooting check docs isaacgym/docs/index.html
@@ -49,7 +55,6 @@ This first part of the installation should be done on the shell, since the Clust
    git clone https://github.com/leggedrobotics/rsl_rl
    cd rsl_rl
    pip install -e .
-   cd /..
    ```
 
 5. Install unitree_rl_gym
@@ -57,7 +62,6 @@ This first part of the installation should be done on the shell, since the Clust
    git clone https://github.com/unitreerobotics/unitree_rl_gym
    cd unitree_rl_gym
    pip install -e .
-   cd /..
    ```
 ## Graphical interface
 
@@ -65,12 +69,16 @@ This first part of the installation should be done on the shell, since the Clust
 2. Log into the interactive sessions website of the university cluster:
 https://login.cluster.uni-hannover.de/pun/sys/dashboard/batch_connect/sessions
 2. Navigate to the "Interactive Apps" field and start a new "Cluster Remote Desktop" session.
-3. Select the 
+3. Select
 * number of hours (eg. 5h)
 * memory per CPU node (32GB)
 * a single RTX compatible GPU (rtxa6000:1)
 * cluster partition (tnt as the only available)
-
+   - Test isaacsim 
+   ```
+   cd isaacgym/python/examples
+   python 1080_balls_of_solitude.py
+   ```
 ## Training
    ```
    python legged_gym/scripts/train.py --task=go2
