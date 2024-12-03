@@ -41,9 +41,7 @@ The cluster could be either accessed with a shell via a webbrowser: https://logi
    cd unitree_rl_gym
    pip install -e .
    ```
-6. Install all other dependencies. Go back to the root of the git repository for this.  
-`pip install .`  
-7. Export all library paths. This step is sometimes also required after creating a new session:
+6. Export all library paths. This step is sometimes also required after creating a new session:
    ```
    export LD_LIBRARY_PATH=/bigwork/<username>/.conda/envs/<venv name>/lib:$LD_LIBRARY_PATH
    ```
