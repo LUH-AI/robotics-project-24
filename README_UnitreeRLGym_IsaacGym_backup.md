@@ -30,8 +30,8 @@ The cluster could be either accessed with a shell via a webbrowser: https://logi
 
    - Download and install Isaac Gym Preview 4 from [https://developer.nvidia.com/isaac-gym](https://developer.nvidia.com/isaac-gym)
    ```
-   wget https://developer.nvidia.com/isaac-gym-preview-4
-   tar -xvzf isaac-gym-preview-4.tar.gz
+   wget https://developer.nvidia.com/isaac-gym-preview-4 --output-document /tmp/isaac-gym-preview-4.tar.gz
+   tar -xvzf /tmp/isaac-gym-preview-4.tar.gz
    cd isaacgym/python && pip install -e .
    ```
    - For troubleshooting check docs isaacgym/docs/index.html
