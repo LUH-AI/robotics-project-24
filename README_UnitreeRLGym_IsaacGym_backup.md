@@ -41,12 +41,6 @@ The cluster could be either accessed with a shell via a webbrowser: https://logi
    tar -xvzf isaac-gym-preview-4.tar.gz
    cd isaacgym/python && pip install -e .
    ```
-   Export the library paths. This step is sometimes also required after creating a new session:
-   ```
-   export LD_LIBRARY_PATH=/bigwork/<username>/.conda/envs/unitree_rl_env/lib:$LD_LIBRARY_PATH
-   export LD_LIBRARY_PATH=/bigwork/<username>/.conda/envs/isaacsym/lib:$LD_LIBRARY_PATH
-   ```
-4. 
    - For troubleshooting check docs isaacgym/docs/index.html
 4. Install rsl_rl (PPO implementation)
 
@@ -62,6 +56,10 @@ The cluster could be either accessed with a shell via a webbrowser: https://logi
    git clone https://github.com/unitreerobotics/unitree_rl_gym
    cd unitree_rl_gym
    pip install -e .
+   ```
+6. Export all library paths. This step is sometimes also required after creating a new session:
+   ```
+   export LD_LIBRARY_PATH=/bigwork/<username>/.conda/envs/<venv name>/lib:$LD_LIBRARY_PATH
    ```
 ## Graphical interface
 
