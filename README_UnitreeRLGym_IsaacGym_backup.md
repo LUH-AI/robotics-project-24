@@ -27,12 +27,13 @@ The cluster could be either accessed with a shell via a webbrowser: https://logi
    cd isaacgym/python && pip install -e .
    ```
    - For troubleshooting check docs isaacgym/docs/index.html
-4. Install rsl_rl (PPO implementation)
+4. Install rsl_rl v1.0.2 (PPO implementation)
 
    - Clone [https://github.com/leggedrobotics/rsl_rl](https://github.com/leggedrobotics/rsl_rl)
    ```
    git clone https://github.com/leggedrobotics/rsl_rl
    cd rsl_rl
+   git checkout v1.0.2
    pip install -e .
    ```
 5. Install unitree_rl_gym
