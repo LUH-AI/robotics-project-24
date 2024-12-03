@@ -3,3 +3,4 @@ build/
 rsl_rl/
 unitree_rl_gym/
 isaacgym/
+__pycache__/
