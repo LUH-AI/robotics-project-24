@@ -20,6 +20,8 @@ The cluster could be either accessed with a shell via a webbrowser: https://logi
 2. Install pytorch 1.10 with cuda-11.3:
    ```
    pip install torch==1.10.0+cu113 torchvision==0.11.1+cu113 torchaudio==0.10.0+cu113 -f https://download.pytorch.org/whl/cu113/torch_stable.html
+   pip install --upgrade torch torchvision
+   pip install --upgrade tensorboard
    pip install setuptools
    ```
    Navigate a proper installation directory for the dependencies like the following and replace <username> with the actual username on the cluster:
