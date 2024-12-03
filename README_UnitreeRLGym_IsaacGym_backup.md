@@ -82,18 +82,18 @@ https://login.cluster.uni-hannover.de/pun/sys/dashboard/batch_connect/sessions
    * --num_envs NUM_ENVS: Number of environments to create.
    * --seed SEED: Random seed.
    * --max_iterations MAX_ITERATIONS: Maximum number of training iterations.
-### Custom training environment
-   Navigate to the envs directory:
-   ```
-   cd unitree_rl_gym/legged_gym/envs
-   ```
-   In this example the existing go2 env will be changed:
-   ```
-   cp -r go2 go2_test1
-   cd go2_test1
-   mv go2_config.py go2_test1_config.py
-   nano go2_test1_config.py
-   ```
+### Training Environment
+
+    In `training_code_isaacgym` is a `train.py` which uses the environment inside of `training_code_isaacgym/environments`. To execute it:  
+    ```
+    cd training_code_isaacgym
+    python train.py --task=toy_example
+    ```
+
+   **Customization**
+
+   *For this part there is no directly editable code inside our repository. The following instructions edit the dependency itself, which we should change.*
+
    Change some of the objectives like "base_height_target = 0.5", close and register the new environment.
    For our example, you could also add some fast rotation reward:
    ```
@@ -104,17 +104,6 @@ https://login.cluster.uni-hannover.de/pun/sys/dashboard/batch_connect/sessions
             torques = -0.0002
             dof_pos_limits = -10.0
             fast_rotation = 5.0
-   ```
-   Now we would have to register the new environment. navigate to and open the __init__.py:
-   ```
-   cd unitree_rl_gym/legged_gym/envs
-   nano __init__.py
-   ```
-   And add the line to import and the line to register the new policy:
-   ```
-   from legged_gym.envs.go2_test1.go2_test1_config import GO2RoughCfg, GO2RoughCfgPPO
-   ...
-   task_registry.register( "go2_test1", LeggedRobot, GO2RoughCfg(), GO2RoughCfgPPO())
    ```
    Now we would have to add the custom reward to the robot class:
    ```
