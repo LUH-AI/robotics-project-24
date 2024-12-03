@@ -96,7 +96,58 @@ https://login.cluster.uni-hannover.de/pun/sys/dashboard/batch_connect/sessions
    * --num_envs NUM_ENVS: Number of environments to create.
    * --seed SEED: Random seed.
    * --max_iterations MAX_ITERATIONS: Maximum number of training iterations.
-
+### Custom training environment
+   Navigate to the envs directory:
+   ```
+   cd unitree_rl_gym/legged_gym/envs
+   ```
+   In this example the existing go2 env will be changed:
+   ```
+   cp -r go2 go2_test1
+   cd go2_test1
+   mv go2_config.py go2_test1_config.py
+   nano go2_test1_config.py
+   ```
+   Change some of the objectives like "base_height_target = 0.5", close and register the new environment.
+   For our example, you could also add some fast rotation reward:
+   ```
+    class rewards( LeggedRobotCfg.rewards ):
+        soft_dof_pos_limit = 0.9
+        base_height_target = 0.5
+        class scales( LeggedRobotCfg.rewards.scales ):
+            torques = -0.0002
+            dof_pos_limits = -10.0
+            fast_rotation = 5.0
+   ```
+   Now we would have to register the new environment. navigate to and open the __init__.py:
+   ```
+   cd unitree_rl_gym/legged_gym/envs
+   nano __init__.py
+   ```
+   And add the line to import and the line to register the new policy:
+   ```
+   from legged_gym.envs.go2_test1.go2_test1_config import GO2RoughCfg, GO2RoughCfgPPO
+   ...
+   task_registry.register( "go2_test1", LeggedRobot, GO2RoughCfg(), GO2RoughCfgPPO())
+   ```
+   Now we would have to add the custom reward to the robot class:
+   ```
+   cd unitree_rl_gym/legged_gym/envs/base
+   nano legged_robot.py
+   ```
+   And add:
+   ```
+   def _reward_fast_rotation(self):
+       """
+       Reward for fast rotations based on the z-axis angular velocity of the base.
+       """
+       # Reward is proportional to the absolute value of the z-axis angular velocity
+       return torch.abs(self.base_ang_vel[:, 2])
+   ```
+   to the bottom of the script. Now just run:
+   ```
+   python unitree_rl_gym/legged_gym/scripts/train.py --task=go2_test1
+   ```
 ## Inference
    ```
    python unitree_rl_gym/legged_gym/scripts/play.py --task=go2
