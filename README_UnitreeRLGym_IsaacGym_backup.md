@@ -8,26 +8,32 @@ This is a simple example of using Unitree Robots for reinforcement learning, inc
 This first part of the installation should be done on the shell, since the Cluster Remote Desktop only allows limited access to the internet for installations.
 The cluster could be either accessed with a shell via a webbrowser: https://login.cluster.uni-hannover.de/pun/sys/shell/ssh/127.0.0.1 or via SSH:
 ## SSH login
-   Connect to the cluster using Putty or anything similar:
+1. Connect to the cluster using Putty or anything similar:
    ```
    <username>@login.cluster.uni-hannover.de
    ```
-1. Create a new python virtual env with python 3.6, 3.7 or 3.8 (3.8 recommended)
+2. Create a new python virtual env with python 3.6, 3.7 or 3.8 (3.8 recommended)
    ```
    conda create -n unitree_rl_env python=3.8 -y
    conda activate unitree_rl_env
    ```
-2. Navigate into the repo, which optimally should be in `$BIGWORK`.
-3. Install Isaac Gym
+3. Navigate into the repo, which optimally should be in `$BIGWORK`.
+   ```
+   cd /bigwork/<username>/user
+   mkdir isaacgym
+   cd isaacgym
+   ```
+4. Install Isaac Gym
 
    - Download and install Isaac Gym Preview 4 from [https://developer.nvidia.com/isaac-gym](https://developer.nvidia.com/isaac-gym)
    ```
    wget https://developer.nvidia.com/isaac-gym-preview-4 --output-document /tmp/isaac-gym-preview-4.tar.gz
    tar -xvzf /tmp/isaac-gym-preview-4.tar.gz
    cd isaacgym/python && pip install -e .
+   cd /..
    ```
    - For troubleshooting check docs isaacgym/docs/index.html
-4. Install rsl_rl v1.0.2 (PPO implementation)
+5. Install rsl_rl v1.0.2 (PPO implementation)
 
    - Clone [https://github.com/leggedrobotics/rsl_rl](https://github.com/leggedrobotics/rsl_rl)
    ```
@@ -35,14 +41,16 @@ The cluster could be either accessed with a shell via a webbrowser: https://logi
    cd rsl_rl
    git checkout v1.0.2
    pip install -e .
+   cd /..
    ```
-5. Install unitree_rl_gym
+6. Install unitree_rl_gym
    ```
    git clone https://github.com/unitreerobotics/unitree_rl_gym
    cd unitree_rl_gym
    pip install -e .
+   cd /..
    ```
-6. Export all library paths. This step is sometimes also required after creating a new session:
+7. Export all library paths. This step is sometimes also required after creating a new session:
    ```
    export LD_LIBRARY_PATH=/bigwork/<username>/.conda/envs/<venv name>/lib:$LD_LIBRARY_PATH
    ```
