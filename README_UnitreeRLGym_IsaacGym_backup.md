@@ -30,7 +30,7 @@ The cluster could be either accessed with a shell via a webbrowser: https://logi
    wget https://developer.nvidia.com/isaac-gym-preview-4 --output-document /tmp/isaac-gym-preview-4.tar.gz
    tar -xvzf /tmp/isaac-gym-preview-4.tar.gz
    cd isaacgym/python && pip install -e .
-   cd /..
+   cd ..
    ```
    - For troubleshooting check docs isaacgym/docs/index.html
 5. Install rsl_rl v1.0.2 (PPO implementation)
@@ -41,14 +41,14 @@ The cluster could be either accessed with a shell via a webbrowser: https://logi
    cd rsl_rl
    git checkout v1.0.2
    pip install -e .
-   cd /..
+   cd ..
    ```
 6. Install unitree_rl_gym
    ```
    git clone https://github.com/unitreerobotics/unitree_rl_gym
    cd unitree_rl_gym
    pip install -e .
-   cd /..
+   cd ..
    ```
 7. Export all library paths. This step is sometimes also required after creating a new session:
    ```
@@ -57,8 +57,7 @@ The cluster could be either accessed with a shell via a webbrowser: https://logi
 ## Graphical interface
 
 ![Isaac Gym Setup](figures/instruction_1.png)
-2. Log into the interactive sessions website of the university cluster:
-https://login.cluster.uni-hannover.de/pun/sys/dashboard/batch_connect/sessions
+1. Log into the interactive sessions website of the university cluster: https://login.cluster.uni-hannover.de/pun/sys/dashboard/batch_connect/sessions
 2. Navigate to the "Interactive Apps" field and start a new "Cluster Remote Desktop" session.
 3. Select
 * number of hours (eg. 5h)
