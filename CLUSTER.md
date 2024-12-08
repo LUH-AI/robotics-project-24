@@ -59,7 +59,7 @@ cache-dir=/bigwork/username/.cache
   * You have to load the cmake module manually instead of installing it by running: `module load CMake`
   * If no conda is available, you have to load the corresponding module: `module load Miniforge3`
   * Note: Add the conda loading to your ~/.bashrc file for faster access
-  * Note: The verification steps will not work because no gui is accessable
+  * Note: The verification steps will not work because no gui is accessible
 
 * IsaacLab Assets Download
   * Note: On the branch `feat/robot_model_simulation` in simulation/ is an example structure with assets, configs and a small demo script (only material assets for groundplane are missing)
@@ -74,6 +74,12 @@ cache-dir=/bigwork/username/.cache
     * Note: vMaterials_2 can be downloaded here: https://developer.nvidia.com/vmaterials (if needed)
   * The code/configs may have to be updated for the new file locations
 
+* To disable the GUI you have to run isaacsim scripts with the environment variable (or argument) HEADLESS=1 (--headless) and if needed ENABLE_CAMERAS=1 (--enable_cameras)
+* **Troubleshooting**
+  * ModuleNotFoundError: No module named 'warp'
+    * Fix: pip install warp-lang
+    * If you have installed only 'warp', you might have to uninstall it and reinstall 'warp-lang' (if you encounter the error ModuleNotFoundError: No module named 'warp.thirdparty')
+
 ### WebRTC Client (Still not working with Cluster)
 1. Start an interactive session with the following command. The following command uses a compute node with a single GPU for an hour (for me an NVIDIA RTX A6000 was provided which worked for the basic example. If no valid GPU type is selected, you can start a script with srun and specify the gpu type with --gres=gpu:gpu_type:number_of_gpus and the amount of RAM with --mem 10GB)
 ```bash
@@ -82,7 +88,8 @@ salloc --time=1:00:00 --partition tnt -G 1 --mem 32G
    * only tnt partition is supported for livestreaming: [Livestreaming is not supported when Isaac Sim is run on the A100 GPU](https://docs.omniverse.nvidia.com/isaacsim/latest/installation/manual_livestream_clients.html)
    * you can verify the gpu type with the command `nvidia-smi`
 1. Type `hostname` to get the name of the used compute node
-2. Start your isaac applications with the LIVESTREAM environment variable (e.g. the dummy example from the verification step of the IsaacLab installation)
+2. Activate your conda environment
+3. Start your isaac applications with the LIVESTREAM environment variable (e.g. the dummy example from the verification step of the IsaacLab installation)
    * For Omniverse-Streaming-Client: 
 ```bash
 LIVESTREAM=1 python source/standalone/tutorials/00_sim/create_empty.py
