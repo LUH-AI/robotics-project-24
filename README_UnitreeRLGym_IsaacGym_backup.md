@@ -27,9 +27,10 @@ The cluster could be either accessed with a shell via a webbrowser: https://logi
 
    - Download and install Isaac Gym Preview 4 from [https://developer.nvidia.com/isaac-gym](https://developer.nvidia.com/isaac-gym)
    ```
-   wget https://developer.nvidia.com/isaac-gym-preview-4 --output-document /tmp/isaac-gym-preview-4.tar.gz
-   tar -xvzf /tmp/isaac-gym-preview-4.tar.gz
+   wget https://developer.nvidia.com/isaac-gym-preview-4 --output-document isaac-gym-preview-4.tar.gz
+   tar -xvzf isaac-gym-preview-4.tar.gz
    cd isaacgym/python && pip install -e .
+   cd ..
    cd ..
    ```
    - For troubleshooting check docs isaacgym/docs/index.html
@@ -50,14 +51,18 @@ The cluster could be either accessed with a shell via a webbrowser: https://logi
    pip install -e .
    cd ..
    ```
-7. Export all library paths. This step is sometimes also required after creating a new session:
+7. Export all library paths. This step is sometimes also required after creating a new session if not updated permanently:
    ```
-   export LD_LIBRARY_PATH=/bigwork/<username>/.conda/envs/<venv name>/lib:$LD_LIBRARY_PATH
+   export PATH=/bigwork/<username>/.conda/envs/unitree_rl_env/bin:$PATH
+   echo 'export PATH=$PATH:/bigwork/<username>/.conda/envs/unitree_rl_env/bin' >> ~/.bashrc
+   source ~/.bashrc
+   conda activate unitree_rl_env 
    ```
 ## Graphical interface
 
 ![Isaac Gym Setup](figures/instruction_1.png)
-1. Log into the interactive sessions website of the university cluster: https://login.cluster.uni-hannover.de/pun/sys/dashboard/batch_connect/sessions
+2. Log into the interactive sessions website of the university cluster:
+https://login.cluster.uni-hannover.de/pun/sys/dashboard/batch_connect/sessions
 2. Navigate to the "Interactive Apps" field and start a new "Cluster Remote Desktop" session.
 3. Select
 * number of hours (eg. 5h)
@@ -65,18 +70,21 @@ The cluster could be either accessed with a shell via a webbrowser: https://logi
 * memory per CPU core (so that #cores * memory > 32GB)
 * a single RTX compatible GPU (rtxa6000:1)
 * cluster partition (tnt as the only available)
-   - Test isaacsim 
+   - Test isaacsim
    ```
-   cd isaacgym/python/examples
+   conda activate unitree_rl_env
+   cd /bigwork/<username>/user/isaacgym/isaacgym/python/examples
    python 1080_balls_of_solitude.py
    ```
 ## Training
    ```
+   conda activate unitree_rl_env
+   cd /bigwork/<username>/user/isaacgym
    python unitree_rl_gym/legged_gym/scripts/train.py --task=go2
    ```
 
    * To run on CPU add following arguments: `--sim_device=cpu`, `--rl_device=cpu` (sim on CPU and rl on GPU is possible).
-   * To run headless (no rendering) add `--headless`.
+   * To run headless (no rendering) add `.
    * **Important** : To improve performance, once the training starts press `v` to stop the rendering. You can then enable it later to check the progress.
    * The trained policy is saved in `logs/<experiment_name>/<date_time>_<run_name>/model_<iteration>.pt`. Where `<experiment_name>` and `<run_name>` are defined in the train config.
    * The following command line arguments override the values set in the config files:
@@ -99,19 +107,6 @@ The cluster could be either accessed with a shell via a webbrowser: https://logi
 
    **Customization**
 
-   *For this part there is no directly editable code inside our repository. The following instructions edit the dependency itself, which we should change.*
-
-   Change some of the objectives like "base_height_target = 0.5", close and register the new environment.
-   For our example, you could also add some fast rotation reward:
-   ```
-    class rewards( LeggedRobotCfg.rewards ):
-        soft_dof_pos_limit = 0.9
-        base_height_target = 0.5
-        class scales( LeggedRobotCfg.rewards.scales ):
-            torques = -0.0002
-            dof_pos_limits = -10.0
-            fast_rotation = 5.0
-   ```
    Now we would have to add the custom reward to the robot class:
    ```
    cd unitree_rl_gym/legged_gym/envs/base
@@ -129,6 +124,18 @@ The cluster could be either accessed with a shell via a webbrowser: https://logi
    to the bottom of the script. Now just run:
    ```
    python unitree_rl_gym/legged_gym/scripts/train.py --task=go2_test1
+   ```
+
+   Change some of the objectives like "base_height_target = 0.5", close and register the new environment.
+   For our example, you could also add some fast rotation reward:
+   ```
+    class rewards( LeggedRobotCfg.rewards ):
+        soft_dof_pos_limit = 0.9
+        base_height_target = 0.5
+        class scales( LeggedRobotCfg.rewards.scales ):
+            torques = -0.0002
+            dof_pos_limits = -10.0
+            fast_rotation = 5.0
    ```
 ## Inference
    ```
