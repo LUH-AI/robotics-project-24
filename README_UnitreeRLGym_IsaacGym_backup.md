@@ -139,6 +139,11 @@ https://login.cluster.uni-hannover.de/pun/sys/dashboard/batch_connect/sessions
             dof_pos_limits = -10.0
             fast_rotation = 5.0
    ```
+
+   To customize the robot, please exchange the current base.dae with the one provided in the ressources/robot directory with the one in the directory:
+   ```
+   cd /bigwork/<username>/user/isaacgym/unitree_rl_gym/resources/robots/go2/dae
+   ```   
 ## Inference
    ```
    python unitree_rl_gym/legged_gym/scripts/play.py --task=go2
