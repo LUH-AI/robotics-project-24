@@ -101,6 +101,8 @@ https://login.cluster.uni-hannover.de/pun/sys/dashboard/batch_connect/sessions
 
     In `training_code_isaacgym` is a `train.py` which uses the environment inside of `training_code_isaacgym/environments`. To execute it:  
     ```
+    conda activate unitree_rl_env
+    cd /bigwork/<username>/user/isaacgym
     cd training_code_isaacgym
     python train.py --task=toy_example
     ```
