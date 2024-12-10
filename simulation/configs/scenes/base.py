@@ -40,4 +40,4 @@ class BaseSceneCfg():
     name: str = "ground_plane"
     static_objects: List[StaticObject] = []
     #initial_robot_position: Location = ...
-    size: float = 0.
+    size: float = 3.
