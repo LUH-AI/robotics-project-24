@@ -27,11 +27,10 @@ The cluster could be either accessed with a shell via a webbrowser: https://logi
 
    - Download and install Isaac Gym Preview 4 from [https://developer.nvidia.com/isaac-gym](https://developer.nvidia.com/isaac-gym)
    ```
-   wget https://developer.nvidia.com/isaac-gym-preview-4 --output-document isaac-gym-preview-4.tar.gz
-   tar -xvzf isaac-gym-preview-4.tar.gz
+   wget https://developer.nvidia.com/isaac-gym-preview-4 --output-document /tmp/isaac-gym-preview-4.tar.gz
+   tar -xvzf /tmp/isaac-gym-preview-4.tar.gz
    cd isaacgym/python && pip install -e .
-   cd ..
-   cd ..
+   cd ../..
    ```
    - For troubleshooting check docs isaacgym/docs/index.html
 5. Install rsl_rl v1.0.2 (PPO implementation)
@@ -53,10 +52,7 @@ The cluster could be either accessed with a shell via a webbrowser: https://logi
    ```
 7. Export all library paths. This step is sometimes also required after creating a new session if not updated permanently:
    ```
-   export PATH=/bigwork/<username>/.conda/envs/unitree_rl_env/bin:$PATH
-   echo 'export PATH=$PATH:/bigwork/<username>/.conda/envs/unitree_rl_env/bin' >> ~/.bashrc
-   source ~/.bashrc
-   conda activate unitree_rl_env 
+   export LD_LIBRARY_PATH=/bigwork/<username>/.conda/envs/<venv name>/lib:$LD_LIBRARY_PATH
    ```
 ## Graphical interface
 
