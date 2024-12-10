@@ -1,4 +1,4 @@
-from .base_config import BaseConfig
+from legged_gym.envs.base.base_config import BaseConfig
 
 class LeggedRobotCfg(BaseConfig):
     class env:
