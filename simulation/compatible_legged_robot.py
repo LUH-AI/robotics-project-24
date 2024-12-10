@@ -1,30 +1,28 @@
-from legged_gym import LEGGED_GYM_ROOT_DIR, envs
-import time
-from warnings import WarningMessage
-import numpy as np
+from typing import List, Any
 import os
+from abc import ABC, abstractmethod
+
+import numpy as np
+import torch
 
 from isaacgym.torch_utils import *
-from isaacgym import gymtorch, gymapi, gymutil
+from isaacgym import gymtorch, gymapi
 
-import torch
-from torch import Tensor
-from typing import Tuple, Dict
 
 from legged_gym import LEGGED_GYM_ROOT_DIR
-from legged_gym.envs.base.base_task import BaseTask
-from legged_gym.utils.math import wrap_to_pi
 from legged_gym.utils.isaacgym_utils import get_euler_xyz as get_euler_xyz_in_tensor
-from legged_gym.utils.helpers import class_to_dict
-from legged_gym.envs.base.legged_robot_config import LeggedRobotCfg
 from legged_gym.envs.base.legged_robot import LeggedRobot
 
 
 # DO NOT MAKE MODIFICATIONS IN THIS FILE!!!
-# USE task.py /task_utils.py!
-# only if legged_gym framework cannot be used at all
+# USE task.py!
+# only if legged_gym framework cannot be used at all/ multiple functions... need to be adapted
 
-class CompatibleLeggedRobot(LeggedRobot):
+class CompatibleLeggedRobot(LeggedRobot, ABC):
+
+    @abstractmethod
+    def _place_static_objects(self, env_idx: int, env_handle: Any):
+        raise NotImplementedError()
 
     def _create_envs(self):
         """ Creates environments:
@@ -83,6 +81,7 @@ class CompatibleLeggedRobot(LeggedRobot):
         env_upper = gymapi.Vec3(0., 0., 0.)
         self.actor_handles = []
         self.envs = []
+        self.object_handles: List[List[Any]] = []
         for i in range(self.num_envs):
             # create env instance
             env_handle = self.gym.create_env(self.sim, env_lower, env_upper, int(np.sqrt(self.num_envs)))
@@ -100,6 +99,10 @@ class CompatibleLeggedRobot(LeggedRobot):
             self.gym.set_actor_rigid_body_properties(env_handle, actor_handle, body_props, recomputeInertia=True)
             self.envs.append(env_handle)
             self.actor_handles.append(actor_handle)
+
+            # add static objects/ actors to environment
+            # function is only
+            self._place_static_objects(i, env_handle)
 
         self.feet_indices = torch.zeros(len(feet_names), dtype=torch.long, device=self.device, requires_grad=False)
         for i in range(len(feet_names)):
@@ -126,9 +129,10 @@ class CompatibleLeggedRobot(LeggedRobot):
         self.dof_vel[env_ids] = 0.
 
         env_ids_int32 = env_ids.to(dtype=torch.int32)
+        actor_ids = env_ids_int32 * (getattr(self, "num_static_objects", 0) + 1)
         self.gym.set_dof_state_tensor_indexed(self.sim,
                                               gymtorch.unwrap_tensor(self.dof_state),
-                                              gymtorch.unwrap_tensor(env_ids_int32), len(env_ids_int32))
+                                              gymtorch.unwrap_tensor(actor_ids), len(actor_ids))
     def _reset_root_states(self, env_ids):
         """ Resets ROOT states position and velocities of selected environmments
             Sets base position based on the curriculum
@@ -146,17 +150,19 @@ class CompatibleLeggedRobot(LeggedRobot):
             self.root_states[env_ids, :3] += self.env_origins[env_ids]
         # base velocities
         self.root_states[env_ids, 7:13] = torch_rand_float(-0.5, 0.5, (len(env_ids), 6), device=self.device) # [7:10]: lin vel, [10:13]: ang vel
-        env_ids_int32 = env_ids.to(dtype=torch.int32)
+
+        self.root_states_complete[self.root_state_indices] = self.root_states
         self.gym.set_actor_root_state_tensor_indexed(self.sim,
-                                                     gymtorch.unwrap_tensor(self.root_states),
-                                                     gymtorch.unwrap_tensor(env_ids_int32), len(env_ids_int32))
+                                                     gymtorch.unwrap_tensor(self.root_states_complete),
+                                                     gymtorch.unwrap_tensor(self.root_state_indices), len(self.root_state_indices))
 
     def _push_robots(self):
         """ Random pushes the robots. Emulates an impulse by setting a randomized base velocity. 
         """
         max_vel = self.cfg.domain_rand.max_push_vel_xy
         self.root_states[:, 7:9] = torch_rand_float(-max_vel, max_vel, (self.num_envs, 2), device=self.device) # lin vel x/y
-        self.gym.set_actor_root_state_tensor(self.sim, gymtorch.unwrap_tensor(self.root_states))
+        self.root_states_complete[self.root_state_indices] = self.root_states
+        self.gym.set_actor_root_state_tensor(self.sim, gymtorch.unwrap_tensor(self.root_states_complete))
 
     #----------------------------------------
     def _init_buffers(self):
@@ -172,13 +178,17 @@ class CompatibleLeggedRobot(LeggedRobot):
 
         # create some wrapper tensors for different slices
         self.root_states_complete = gymtorch.wrap_tensor(actor_root_state)
+        # root_states_complete includes root_states of static objects which is not desired for the following logic
+        self.root_state_indices = torch.arange(0, len(self.root_states_complete), step=getattr(self, "num_static_objects", 0) + 1, dtype=torch.int32).to(self.device)
+        self.root_states = self.root_states_complete[self.root_state_indices]
+
         self.dof_state = gymtorch.wrap_tensor(dof_state_tensor)
         self.dof_pos = self.dof_state.view(self.num_envs, self.num_dof, 2)[..., 0]
         self.dof_vel = self.dof_state.view(self.num_envs, self.num_dof, 2)[..., 1]
         self.base_quat = self.root_states[:, 3:7]
         self.rpy = get_euler_xyz_in_tensor(self.base_quat)
         self.base_pos = self.root_states[:self.num_envs, 0:3]
-        self.contact_forces = gymtorch.wrap_tensor(net_contact_forces).view(self.num_envs, -1, 3) # shape: num_envs, num_bodies, xyz axis
+        self.contact_forces = gymtorch.wrap_tensor(net_contact_forces).view(self.num_envs, -1, 3)[:, :self.num_bodies] # shape: num_envs, num_bodies, xyz axis
 
         # initialize some data used later on
         self.common_step_counter = 0
