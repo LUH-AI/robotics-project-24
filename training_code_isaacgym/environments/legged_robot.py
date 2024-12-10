@@ -16,7 +16,7 @@ from legged_gym.envs.base.base_task import BaseTask
 from legged_gym.utils.math import wrap_to_pi
 from legged_gym.utils.isaacgym_utils import get_euler_xyz as get_euler_xyz_in_tensor
 from legged_gym.utils.helpers import class_to_dict
-from .legged_robot_config import LeggedRobotCfg
+from environments.legged_robot_config import LeggedRobotCfg
 
 class LeggedRobot(BaseTask):
     def __init__(self, cfg: LeggedRobotCfg, sim_params, physics_engine, sim_device, headless):
@@ -183,8 +183,9 @@ class LeggedRobot(BaseTask):
                                     self.commands[:, :3] * self.commands_scale,
                                     (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
                                     self.dof_vel * self.obs_scales.dof_vel,
-                                    self.actions
+                                    self.actions,
                                     ),dim=-1)
+
         # add perceptive inputs if not blind
         # add noise if needed
         if self.add_noise:
