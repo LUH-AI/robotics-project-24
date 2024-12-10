@@ -1,4 +1,7 @@
-from legged_gym.envs.base.legged_robot_config import LeggedRobotCfg, LeggedRobotCfgPPO
+from legged_gym.envs.base.legged_robot_config import LeggedRobotCfg
+
+from ..scenes import BaseSceneCfg
+
 
 # this is the GO2RoughCfg copied from unitree_rl_gym repo (do not change, create a new file)
 class GO2DefaultCfg( LeggedRobotCfg ):
@@ -47,3 +50,7 @@ class GO2DefaultCfg( LeggedRobotCfg ):
         class scales( LeggedRobotCfg.rewards.scales ):
             torques = -0.0002
             dof_pos_limits = -10.0
+
+    # for language server purposes (the selected scene config is added automatically)
+    class scene( BaseSceneCfg ):
+        pass
