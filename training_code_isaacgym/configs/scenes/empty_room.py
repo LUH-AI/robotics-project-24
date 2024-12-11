@@ -3,7 +3,7 @@ from pathlib import Path
 from . import BaseSceneCfg, StaticObject
 
 
-asset_path = Path("assets/scenes/empty_room")
+asset_path = Path(__file__).parents[2] / "assets/scenes/empty_room"
 urdf_path = asset_path / "urdf" / "walls.urdf"
 
 class EmptyRoomCfg(BaseSceneCfg):

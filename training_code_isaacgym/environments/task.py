@@ -5,12 +5,12 @@ from isaacgym import gymapi
 
 from legged_gym.utils.task_registry import task_registry
 
-from configs.robots import GO2DefaultCfg
-from configs.scenes import BaseSceneCfg
-from configs.algorithms import PPODefaultCfg
-from compatible_legged_robot import CompatibleLeggedRobot
+from ..configs.robots import GO2DefaultCfg
+from ..configs.scenes import BaseSceneCfg
+from ..configs.algorithms import PPODefaultCfg
+from .compatible_legged_robot import CompatibleLeggedRobot
 
-
+GO2DefaultCfg()
 # do CONFIGURABLE adaptations in this file
 
 
