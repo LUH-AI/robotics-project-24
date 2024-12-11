@@ -1,6 +1,6 @@
 [project]
-name = "heinrich-template"
-version = "0.1.0"
+name = "Unitree-Go2-Rl-Project"
+version = "0.0.1"
 dependencies = [
   "typing_extensions", # Better typing
   "tomli", 
@@ -14,9 +14,16 @@ dependencies = [
   "hydra-submitit-launcher",
   "hydra_colorlog",
   "mypy",
+  "torch",
+  "torchvision",
+  "torchaudio",
+  "tensorboard",
+  "isaacgym",
+  "rsl_rl",
+  "unitree_rl_gym",
 ]
 
-requires-python = ">=3.11"
+requires-python = ">3.5,<3.9"
 authors = [{ name = "LUHAI Robots", email =  "t.eimer@ai.uni-hannover.de" }]
 readme = "README.md"
 description = "Starter code for Heinrich the dog"
@@ -42,6 +49,21 @@ examples = []
 docs = [
   "automl_sphinx_theme",
 ]
+
+
+[tool.uv.sources]
+# install pytorch from poper source supporting CUDA
+torch = { index = "pytorch" }
+torchvision = { index = "pytorch" }
+torchaudio = { index = "pytorch" }
+isaacgym = { path = "./isaacgym/pyhon" }
+rsl_rl = { git = "https://github.com/leggedrobotics/rsl_rl" }
+unitree_rl_gym = { git = "https://github.com/unitreerobotics/unitree_rl_gym" }
+
+[[tool.uv.index]]
+name = "pytorch"
+url = "https://download.pytorch.org/whl/cu124"
+explicit = true
 
 
 # https://docs.pytest.org/en/7.2.x/reference/reference.html#ini-options-ref
