@@ -6,6 +6,7 @@ from . import BaseSceneCfg, StaticObject
 asset_path = Path(__file__).parents[2] / "assets/scenes/empty_room"
 urdf_path = asset_path / "urdf" / "walls.urdf"
 
+
 class EmptyRoomCfg(BaseSceneCfg):
     name = "empty_room"
     static_objects = [
@@ -15,4 +16,4 @@ class EmptyRoomCfg(BaseSceneCfg):
             urdf_path,
         )
     ]
-    size: float = 11.
+    size: float = 11.0

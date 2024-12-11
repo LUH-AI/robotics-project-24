@@ -15,7 +15,9 @@ GO2DefaultCfg()
 
 
 # register all tasks derived from CustomLeggedRobot
-def register_task(robot_cfg: GO2DefaultCfg, scene_cfg: BaseSceneCfg, algorithm_cfg: PPODefaultCfg) -> str:
+def register_task(
+    robot_cfg: GO2DefaultCfg, scene_cfg: BaseSceneCfg, algorithm_cfg: PPODefaultCfg
+) -> str:
     """Register task based on robot, scene and algorithm configurations
     All configs need a name attribute.
 
@@ -38,13 +40,15 @@ def register_task(robot_cfg: GO2DefaultCfg, scene_cfg: BaseSceneCfg, algorithm_c
 
 
 class CustomLeggedRobot(CompatibleLeggedRobot):
-    def __init__(self, cfg: GO2DefaultCfg, sim_params, physics_engine, sim_device, headless):
+    def __init__(
+        self, cfg: GO2DefaultCfg, sim_params, physics_engine, sim_device, headless
+    ):
         super().__init__(cfg, sim_params, physics_engine, sim_device, headless)
         # for language server purposes only
         self.cfg: GO2DefaultCfg = self.cfg
 
     def _create_ground_plane(self):
-        """ Adds a ground plane to the simulation, sets friction and restitution based on the cfg.
+        """Adds a ground plane to the simulation, sets friction and restitution based on the cfg.
         Additionally, sets segmentation_id to 1 (index of ObjectType="ground")
         """
         plane_params = gymapi.PlaneParams()
@@ -52,7 +56,7 @@ class CustomLeggedRobot(CompatibleLeggedRobot):
         plane_params.static_friction = self.cfg.terrain.static_friction
         plane_params.dynamic_friction = self.cfg.terrain.dynamic_friction
         plane_params.restitution = self.cfg.terrain.restitution
-        plane_params.segmentation_id = 1 # added for compatibility
+        plane_params.segmentation_id = 1  # added for compatibility
         self.gym.add_ground(self.sim, plane_params)
 
     def _place_static_objects(self, env_idx: int, env_handle: Any):
@@ -69,17 +73,36 @@ class CustomLeggedRobot(CompatibleLeggedRobot):
             if len(self.object_assets) - 1 > object_idx:
                 obj_asset = self.object_assets[object_idx]
             else:
-                obj_asset = self.gym.load_asset(self.sim, str(static_obj.asset_root), str(static_obj.asset_file), static_obj.asset_options)
+                obj_asset = self.gym.load_asset(
+                    self.sim,
+                    str(static_obj.asset_root),
+                    str(static_obj.asset_file),
+                    static_obj.asset_options,
+                )
                 self.object_assets.append(obj_asset)
 
             start_pose = gymapi.Transform()
             location_offset = self.env_origins[env_idx].clone()
             init_location = static_obj.init_location.to(self.device)
-            random_loc_offset = (static_obj.max_random_loc_offset * (torch.rand(static_obj.max_random_loc_offset.shape) - 0.5) * 2).to(self.device)
-            start_pose.p = gymapi.Vec3(*(init_location + location_offset + random_loc_offset))
+            random_loc_offset = (
+                static_obj.max_random_loc_offset
+                * (torch.rand(static_obj.max_random_loc_offset.shape) - 0.5)
+                * 2
+            ).to(self.device)
+            start_pose.p = gymapi.Vec3(
+                *(init_location + location_offset + random_loc_offset)
+            )
 
             # env_idx sets collision group, -1 default for collision_filter
-            object_handle = self.gym.create_actor(env_handle, obj_asset, start_pose, static_obj.name, env_idx, -1, static_obj.segmentation_id)
+            object_handle = self.gym.create_actor(
+                env_handle,
+                obj_asset,
+                start_pose,
+                static_obj.name,
+                env_idx,
+                -1,
+                static_obj.segmentation_id,
+            )
             self.object_handles[env_idx].append(object_handle)
 
     # add custom rewards... here (use your robot_cfg for control)

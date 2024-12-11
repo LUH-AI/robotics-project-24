@@ -10,8 +10,15 @@ ObjectType = Literal["robot", "ground", "wall", "flower_pot", "ball", "obstacle"
 Location = Tuple[float, float, float]
 
 
-class StaticObject():
-    def __init__(self, name: str, type: ObjectType, asset_path: Path, init_location: Optional[Location] = None, max_random_loc_offset: Optional[Location] = None) -> None:
+class StaticObject:
+    def __init__(
+        self,
+        name: str,
+        type: ObjectType,
+        asset_path: Path,
+        init_location: Optional[Location] = None,
+        max_random_loc_offset: Optional[Location] = None,
+    ) -> None:
         """Create a static object
 
         Args:
@@ -23,8 +30,14 @@ class StaticObject():
         """
         self.name: str = name
         self.type = type
-        self.init_location = torch.tensor(init_location) if init_location != None else torch.zeros(3)
-        self.max_random_loc_offset = torch.tensor(max_random_loc_offset) if max_random_loc_offset != None else torch.zeros(3)
+        self.init_location = (
+            torch.tensor(init_location) if init_location != None else torch.zeros(3)
+        )
+        self.max_random_loc_offset = (
+            torch.tensor(max_random_loc_offset)
+            if max_random_loc_offset != None
+            else torch.zeros(3)
+        )
 
         self.asset_path = asset_path
         self.asset_root = asset_path.parents[1]
@@ -37,8 +50,8 @@ class StaticObject():
         self.segmentation_id: int = types.index(type)
 
 
-class BaseSceneCfg():
+class BaseSceneCfg:
     name: str = "ground_plane"
     static_objects: List[StaticObject] = []
-    #initial_robot_position: Location = ...
-    size: float = 3.
+    # initial_robot_position: Location = ...
+    size: float = 3.0
