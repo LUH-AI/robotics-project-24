@@ -14,9 +14,9 @@ dependencies = [
   "hydra-submitit-launcher",
   "hydra_colorlog",
   "mypy",
-  "torch==1.10.0",
-  "torchvision==0.11.1",
-  "torchaudio==0.10.0",
+  "torch",
+  "torchvision",
+  "torchaudio",
   "tensorboard",
   "isaacgym",
   "rsl_rl",
@@ -62,7 +62,7 @@ unitree_rl_gym = { git = "https://github.com/unitreerobotics/unitree_rl_gym" }
 
 [[tool.uv.index]]
 name = "pytorch"
-url = "https://download.pytorch.org/whl/cu113"
+url = "https://download.pytorch.org/whl/cu124"
 explicit = true
 
 
