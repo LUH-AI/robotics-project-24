@@ -81,7 +81,8 @@ class CompatibleLeggedRobot(LeggedRobot, ABC):
         env_upper = gymapi.Vec3(0., 0., 0.)
         self.actor_handles = []
         self.envs = []
-        self.object_handles: List[List[Any]] = []
+        self.object_handles: List[List[Any]] = [] # TODO add type for handle
+        self.object_assets: List[Any] = [] # TODO add type for gym asset
         for i in range(self.num_envs):
             # create env instance
             env_handle = self.gym.create_env(self.sim, env_lower, env_upper, int(np.sqrt(self.num_envs)))

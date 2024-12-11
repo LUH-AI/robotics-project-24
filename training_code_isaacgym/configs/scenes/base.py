@@ -27,14 +27,15 @@ class StaticObject():
         self.max_random_loc_offset = torch.tensor(max_random_loc_offset) if max_random_loc_offset != None else torch.zeros(3)
 
         self.asset_path = asset_path
-        self.asset_root = asset_path.parent
-        self.asset_file = asset_path.name
+        self.asset_root = asset_path.parents[1]
+        self.asset_file = f"{asset_path.parent.name}/{asset_path.name}"
 
         self.asset_options = gymapi.AssetOptions()
         self.asset_options.collapse_fixed_joints = True
 
         types = typing.get_args(ObjectType)
         self.segmentation_id: int = types.index(type)
+
 
 class BaseSceneCfg():
     name: str = "ground_plane"

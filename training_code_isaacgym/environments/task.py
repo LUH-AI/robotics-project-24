@@ -57,6 +57,7 @@ class CustomLeggedRobot(CompatibleLeggedRobot):
 
     def _place_static_objects(self, env_idx: int, env_handle: Any):
         """Places static objects like walls into the provided environment
+        It is called in the environment creation loop in super()._create_envs()
 
         Args:
             env_idx (int): Index of environment
@@ -64,8 +65,12 @@ class CustomLeggedRobot(CompatibleLeggedRobot):
         """
         self.object_handles.append([])
         self.num_static_objects = len(self.cfg.scene.static_objects)
-        for static_obj in self.cfg.scene.static_objects:
-            obj_asset = self.gym.load_asset(self.sim, str(static_obj.asset_root), str(static_obj.asset_file), static_obj.asset_options)
+        for object_idx, static_obj in enumerate(self.cfg.scene.static_objects):
+            if len(self.object_assets) - 1 > object_idx:
+                obj_asset = self.object_assets[object_idx]
+            else:
+                obj_asset = self.gym.load_asset(self.sim, str(static_obj.asset_root), str(static_obj.asset_file), static_obj.asset_options)
+                self.object_assets.append(obj_asset)
 
             start_pose = gymapi.Transform()
             location_offset = self.env_origins[env_idx].clone()
