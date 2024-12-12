@@ -12,11 +12,12 @@ from torch import Tensor
 from typing import Tuple, Dict
 
 from legged_gym import LEGGED_GYM_ROOT_DIR
-from legged_gym.envs.base.base_task import BaseTask
+from .base_task import BaseTask
 from legged_gym.utils.math import wrap_to_pi
 from legged_gym.utils.isaacgym_utils import get_euler_xyz as get_euler_xyz_in_tensor
 from legged_gym.utils.helpers import class_to_dict
 from environments.legged_robot_config import LeggedRobotCfg
+import cv2
 
 class LeggedRobot(BaseTask):
     def __init__(self, cfg: LeggedRobotCfg, sim_params, physics_engine, sim_device, headless):
@@ -38,6 +39,7 @@ class LeggedRobot(BaseTask):
         self.debug_viz = False
         self.init_done = False
         self._parse_cfg(self.cfg)
+        self._prepare_camera(self.cfg.camera.horizontal_fov, self.cfg.camera.width, self.cfg.camera.height, self.cfg.camera.enable_tensors)
         super().__init__(self.cfg, sim_params, physics_engine, sim_device, headless)
 
         if not self.headless:
@@ -45,6 +47,14 @@ class LeggedRobot(BaseTask):
         self._init_buffers()
         self._prepare_reward_function()
         self.init_done = True
+
+    def _prepare_camera(self, horizontal_fov, width, height, tensors):
+        self.camera_props = gymapi.CameraProperties()
+        self.camera_props.horizontal_fov = horizontal_fov
+        self.camera_props.width = width
+        self.camera_props.height = height
+        self.camera_props.enable_tensors = tensors
+        
 
     def step(self, actions):
         """ Apply actions, simulate, call self.post_physics_step()
@@ -71,7 +81,6 @@ class LeggedRobot(BaseTask):
                 self.gym.fetch_results(self.sim, True)
             self.gym.refresh_dof_state_tensor(self.sim)
         self.post_physics_step()
-
         # return clipped obs, clipped states (None), rewards, dones and infos
         clip_obs = self.cfg.normalization.clip_observations
         self.obs_buf = torch.clip(self.obs_buf, -clip_obs, clip_obs)
@@ -185,7 +194,12 @@ class LeggedRobot(BaseTask):
                                     self.dof_vel * self.obs_scales.dof_vel,
                                     self.actions,
                                     ),dim=-1)
-
+        
+        image = self.gym.get_camera_image(self.sim, self.envs[0], self.cameras[0], gymapi.IMAGE_COLOR)
+        print(type(image))
+        cv2.imwrite("Test_robo_image.jpeg", image)
+        print("Image Saved xD")
+        exit()
         # add perceptive inputs if not blind
         # add noise if needed
         if self.add_noise:
@@ -565,6 +579,7 @@ class LeggedRobot(BaseTask):
         env_upper = gymapi.Vec3(0., 0., 0.)
         self.actor_handles = []
         self.envs = []
+        self.cameras = []
         for i in range(self.num_envs):
             # create env instance
             env_handle = self.gym.create_env(self.sim, env_lower, env_upper, int(np.sqrt(self.num_envs)))
@@ -580,6 +595,12 @@ class LeggedRobot(BaseTask):
             body_props = self.gym.get_actor_rigid_body_properties(env_handle, actor_handle)
             body_props = self._process_rigid_body_props(body_props, i)
             self.gym.set_actor_rigid_body_properties(env_handle, actor_handle, body_props, recomputeInertia=True)
+            camera_handle = self.gym.create_camera_sensor(env_handle, self.camera_props)
+            local_transform = gymapi.Transform()
+            local_transform.p = gymapi.Vec3(0,0,10)
+            local_transform.r = gymapi.Quat.from_axis_angle(gymapi.Vec3(0,1,0), np.radians(45.0))
+            self.gym.attach_camera_to_body(camera_handle, env_handle, actor_handle, local_transform, gymapi.FOLLOW_TRANSFORM)
+            self.cameras.append(camera_handle)
             self.envs.append(env_handle)
             self.actor_handles.append(actor_handle)
 

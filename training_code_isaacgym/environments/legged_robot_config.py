@@ -2,7 +2,7 @@ from legged_gym.envs.base.base_config import BaseConfig
 
 class LeggedRobotCfg(BaseConfig):
     class env:
-        num_envs = 4096
+        num_envs = 32
         num_observations = 48
         num_privileged_obs = None # if not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned otherwise 
         num_actions = 12
@@ -150,6 +150,13 @@ class LeggedRobotCfg(BaseConfig):
         ref_env = 0
         pos = [10, 0, 6]  # [m]
         lookat = [11., 5, 3.]  # [m]
+
+    # robot camera:
+    class camera:
+        horizontal_fov = 75
+        width = 1920
+        height = 1080
+        enable_tensors = True
 
     class sim:
         dt =  0.005
