@@ -93,7 +93,10 @@ https://login.cluster.uni-hannover.de/pun/sys/dashboard/batch_connect/sessions
    * --num_envs NUM_ENVS: Number of environments to create.
    * --seed SEED: Random seed.
    * --max_iterations MAX_ITERATIONS: Maximum number of training iterations.
+
 ### Training Environment
+
+    **This is deprecated, the project has been restructured. Changes are now expected in `training_code_isaacgym/environments/task.py`. Running the project currently is done via calling `python -m training_code_isaacgym.train`. Apart from that, the following still serves as an example for how to do changes to the environment/agent**
 
     In `training_code_isaacgym` is a `train.py` which uses the environment inside of `training_code_isaacgym/environments`. To execute it:  
     ```
