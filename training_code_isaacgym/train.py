@@ -1,4 +1,6 @@
 from typing import Tuple
+import os
+from pathlib import Path
 
 from isaacgym import gymutil
 
@@ -128,7 +130,7 @@ def get_configs(
 def train(task_name, args):
     env, env_cfg = task_registry.make_env(name=task_name, args=args)
     ppo_runner, train_cfg = task_registry.make_alg_runner(
-        env=env, name=task_name, args=args
+        env=env, name=task_name, args=args, log_root=Path(os.getcwd()) / "logs"
     )
     ppo_runner.learn(
         num_learning_iterations=train_cfg.runner.max_iterations,
