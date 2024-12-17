@@ -25,6 +25,12 @@ def get_args():
             "help": "Resume training or start testing from a checkpoint. Overrides config file if provided.",
         },
         {
+            "name": "--robot_class",
+            "type": str,
+            "default": "go2_default_class",
+            "help": "Robot class to use, (see environments/task.py)",
+        },
+        {
             "name": "--scene",
             "type": str,
             "default": "ground_plane",
@@ -116,6 +122,7 @@ def get_configs(
 ]:
     robots = {
         "go2_default": robot_configs.GO2DefaultCfg(),
+        "go2_high-level-policy_plant": robot_configs.GO2HighLevelPlantPolicyCfg(),
     }
     scenes = {
         "ground_plane": scene_configs.BaseSceneCfg(),
@@ -123,8 +130,14 @@ def get_configs(
     }
     algorithms = {
         "ppo_default": alg_configs.PPODefaultCfg(),
+        "ppo_move-policy_plant": alg_configs.PPOMovePolicyPlantCfg(),
+        "ppo_high-level-policy_plant": alg_configs.PPOHighLevelPolicyPlantCfg(),
     }
-    return robots[args.robot], scenes[args.scene], algorithms[args.algorithm]
+    robot_class = {
+        "go2_default_class": task.CustomLeggedRobot,
+        "go2_high-level-policy_plant_class": task.HighLevelPlantPolicyLeggedRobot,
+    }
+    return robots[args.robot], scenes[args.scene], algorithms[args.algorithm], robot_class[args.robot_class]
 
 
 def train(task_name, args):
