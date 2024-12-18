@@ -1,4 +1,6 @@
 from typing import Tuple
+import os
+from pathlib import Path
 
 from isaacgym import gymutil
 
@@ -21,6 +23,12 @@ def get_args():
             "type": str,
             "default": "go2_default",
             "help": "Resume training or start testing from a checkpoint. Overrides config file if provided.",
+        },
+        {
+            "name": "--robot_class",
+            "type": str,
+            "default": "go2_default_class",
+            "help": "Robot class to use, (see environments/task.py)",
         },
         {
             "name": "--scene",
@@ -114,6 +122,7 @@ def get_configs(
 ]:
     robots = {
         "go2_default": robot_configs.GO2DefaultCfg(),
+        "go2_high-level-policy_plant": robot_configs.GO2HighLevelPlantPolicyCfg(),
     }
     scenes = {
         "ground_plane": scene_configs.BaseSceneCfg(),
@@ -121,14 +130,20 @@ def get_configs(
     }
     algorithms = {
         "ppo_default": alg_configs.PPODefaultCfg(),
+        "ppo_move-policy_plant": alg_configs.PPOMovePolicyPlantCfg(),
+        "ppo_high-level-policy_plant": alg_configs.PPOHighLevelPolicyPlantCfg(),
     }
-    return robots[args.robot], scenes[args.scene], algorithms[args.algorithm]
+    robot_class = {
+        "go2_default_class": task.CustomLeggedRobot,
+        "go2_high-level-policy_plant_class": task.HighLevelPlantPolicyLeggedRobot,
+    }
+    return robots[args.robot], scenes[args.scene], algorithms[args.algorithm], robot_class[args.robot_class]
 
 
 def train(task_name, args):
     env, env_cfg = task_registry.make_env(name=task_name, args=args)
     ppo_runner, train_cfg = task_registry.make_alg_runner(
-        env=env, name=task_name, args=args
+        env=env, name=task_name, args=args, log_root=Path(os.getcwd()) / "logs"
     )
     ppo_runner.learn(
         num_learning_iterations=train_cfg.runner.max_iterations,

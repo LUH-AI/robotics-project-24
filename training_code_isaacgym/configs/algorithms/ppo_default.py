@@ -48,3 +48,10 @@ class PPODefaultCfg(BaseConfig):
         load_run = -1  # -1 = last run
         checkpoint = -1  # -1 = last saved model
         resume_path = None  # updated from load_run and chkpt
+
+class PPOMovePolicyPlantConfig(PPODefaultCfg):
+    name = "ppo_move-policy_plant"
+
+class PPOHighLevelPolicyPlantConfig(PPODefaultCfg):
+    name = "ppo_high-level-policy_plant"
+    # This class is here to be able to modify the hyperparameters for PPO independently from the low level policy
