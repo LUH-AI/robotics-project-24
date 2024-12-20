@@ -195,7 +195,7 @@ class LeggedRobot(BaseTask):
                                     self.actions,
                                     ),dim=-1)
         
-        image = self.gym.get_camera_image(self.sim, self.envs[0], self.cameras[0], gymapi.IMAGE_COLOR)
+        image = self.gym.get_camera_image(self.sim, self.envs[0], self.cameras[0], gymapi.IMAGE_DEPTH)
         print(type(image))
         cv2.imwrite("Test_robo_image.jpeg", image)
         print("Image Saved xD")

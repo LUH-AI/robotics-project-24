@@ -153,9 +153,9 @@ class LeggedRobotCfg(BaseConfig):
 
     # robot camera:
     class camera:
-        horizontal_fov = 75
-        width = 1920
-        height = 1080
+        horizontal_fov = 120
+        width = 12
+        height = 1
         enable_tensors = True
 
     class sim:
