@@ -1,11 +1,14 @@
+import plant_watering_robot.envs
 import os
 import numpy as np
 from datetime import datetime
 import sys
-
 import isaacgym
-from legged_gym.envs import *
-from legged_gym.utils import get_args, task_registry
+
+from envs import *
+
+from utils.helpers import get_args
+from utils.task_registry import *
 import torch
 
 def train(args):
