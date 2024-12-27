@@ -29,7 +29,11 @@ def  __init__(self, low_level_cfg: LeggedRobotCfg, cfg: PlantWateringRobotCfg, s
 	- computes high and low lvl observations
 		- compute_observations() - high lvl
 		- compute_low_level_observations() - low lvl
-
+		
+## Train
+- train script is plant_watering_robot/scripts/train.py
+- args are the same as before
+- can be run with: python train.py --task=plant_watering --num_envs=20
 ## TODOs
 - implement high lvl commands into observation for high lvl policy in compute_observations()
 - adjust compute_low_level_observations() so we can use the new low lvl policy from thor
