@@ -1,0 +1,1 @@
+python -m plant_watering_robot.scripts.train --task=plant_watering --num_envs=20

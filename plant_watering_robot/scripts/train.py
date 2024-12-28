@@ -1,15 +1,23 @@
-import plant_watering_robot.envs
+from plant_watering_robot.envs import *
+from plant_watering_robot.envs.base.legged_robot import LeggedRobot
+from plant_watering_robot.envs.robots.go2_config import GO2RoughCfg, GO2RoughCfgPPO
+from plant_watering_robot.envs.base.plant_watering_robot import PlantWateringRobot
+from plant_watering_robot.envs.base.plant_watering_robot_config import PlantWateringRobotCfg, PlantWateringRobotCfgPPO
+
+
 import os
 import numpy as np
 from datetime import datetime
 import sys
 import isaacgym
 
-from envs import *
-
-from utils.helpers import get_args
-from utils.task_registry import *
+from plant_watering_robot.utils.helpers import get_args
+from plant_watering_robot.utils.task_registry import *
 import torch
+
+
+task_registry.register( "go2", LeggedRobot, GO2RoughCfg(), GO2RoughCfgPPO())
+task_registry.register_high_lvl_task( "plant_watering", PlantWateringRobot, PlantWateringRobotCfg(), GO2RoughCfg(), PlantWateringRobotCfgPPO())
 
 def train(args):
     env, env_cfg = task_registry.make_env(name=args.task, args=args)

@@ -49,8 +49,8 @@ class PlantWateringRobot(BaseTask):
         self._prepare_reward_function()
         self.init_done = True
         
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        policy_path = os.path.join(script_dir, "low_level_policy.pt")
+        policy_path = os.path.join(os.path.dirname(__file__), '..', '..','policies', 'low_level_policy.pt')
+
         if not os.path.isfile(policy_path):
             raise FileNotFoundError(f"Policy file {policy_path} does not exist.")
         file_bytes = read_file(policy_path)
