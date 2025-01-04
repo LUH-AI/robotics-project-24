@@ -53,3 +53,10 @@ class GO2DefaultCfg(LeggedRobotCfg):
     # for language server purposes (the selected scene config is added automatically)
     class scene(BaseSceneCfg):
         pass
+
+    # robot camera:
+    class camera:
+        horizontal_fov = 120
+        width = 12
+        height = 1
+        enable_tensors = True
