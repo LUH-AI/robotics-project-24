@@ -6,6 +6,15 @@ from ..scenes import BaseSceneCfg
 # this is the GO2RoughCfg copied from unitree_rl_gym repo (do not change, create a new file)
 class GO2DefaultCfg(LeggedRobotCfg):
     name = "go2_default"
+    class env(LeggedRobotCfg.env):
+        num_envs = 1
+        num_observations = 48
+        num_privileged_obs = None # if not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned otherwise 
+        num_actions = 12
+        env_spacing = 3.  # not used with heightfields/trimeshes 
+        send_timeouts = True # send time out information to the algorithm
+        episode_length_s = 20 # episode length in seconds
+        test = False
 
     class init_state(LeggedRobotCfg.init_state):
         pos = [0.0, 0.0, 0.42]  # x,y,z [m]
