@@ -68,10 +68,10 @@ class GO2DefaultCfg(LeggedRobotCfg):
     # robot camera:
     class camera:
         horizontal_fov = 120
-        width = 1920
-        height = 1080
+        width = 12
+        height = 1
         enable_tensors = True
-        vec_from_body_center = gymapi.Vec3(0, 0, 10)
+        vec_from_body_center = gymapi.Vec3(0.34, 0, 0.021) # Should be closest to reality: (0.34, 0, 0.021)m
         rot_of_camera = gymapi.Quat.from_axis_angle(
-            gymapi.Vec3(0, 1, 0), np.radians(45)
+            gymapi.Vec3(0, 0, 1), np.radians(0)
         )

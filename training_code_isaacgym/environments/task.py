@@ -3,6 +3,7 @@ from typing import Any, List
 import torch
 import cv2
 import os
+import sys
 
 from isaacgym import gymapi
 from isaacgym.torch_utils import *
@@ -55,20 +56,6 @@ class CustomLeggedRobot(CompatibleLeggedRobot):
         super().__init__(cfg, sim_params, physics_engine, sim_device, headless)
         # for language server purposes only
         self.cfg: GO2DefaultCfg = self.cfg
-        # Parameters for video
-        frame_width = cfg.camera.width  # Replace with your actual frame width
-        frame_height = cfg.camera.height  # Replace with your actual frame height
-        fps = 30  # Frames per second
-
-        # Initialize video writer
-        self.output_file = "testmovie.mp4"
-        self.video_writer = cv2.VideoWriter(
-            self.output_file,  # Output file name
-            cv2.VideoWriter_fourcc(*'mp4v'),  # Codec
-            fps,  # Frames per second
-            (frame_width, frame_height)  # Frame size
-        )
-        self.frames = []
 
     def __del__(self):
         if self.video_writer:
@@ -145,6 +132,10 @@ class CustomLeggedRobot(CompatibleLeggedRobot):
 
     def compute_observations(self):
         """Computes observations"""
+        image = self.gym.get_camera_image(
+            self.sim, self.envs[0], self.cameras[0], gymapi.IMAGE_DEPTH
+        )
+        #TODO: Add Distance measure to observation / preprocess it to a good range. Currently: -inf = infinitely far away and -0.1 is 10cm away
         self.obs_buf = torch.cat(
             (
                 self.base_lin_vel * self.obs_scales.lin_vel,
@@ -160,13 +151,6 @@ class CustomLeggedRobot(CompatibleLeggedRobot):
         # All entries in torch.cat have dimensions, n_envs * n where you can determine n, but have to add it to n_obs in the configuration of the robot
         # add perceptive inputs if not blind
         # add noise if needed
-        image = self.gym.get_camera_image(
-            self.sim, self.envs[0], self.cameras[0], gymapi.IMAGE_COLOR
-        )
-        print(image)
-        image = np.reshape(image, (self.cfg.camera.height, self.cfg.camera.width, 4))
-        image_bgr = cv2.cvtColor(image, cv2.COLOR_RGBA2BGR)
-        self.video_writer.write(image_bgr)
 
         if self.add_noise:
             self.obs_buf += (
@@ -328,3 +312,29 @@ class CustomLeggedRobot(CompatibleLeggedRobot):
             )
 
     # add custom rewards... here (use your robot_cfg for control)
+    def render(self, sync_frame_time=True):
+        if self.viewer:
+            # check for window closed
+            if self.gym.query_viewer_has_closed(self.viewer):
+                sys.exit()
+
+            # check for keyboard events
+            for evt in self.gym.query_viewer_action_events(self.viewer):
+                if evt.action == "QUIT" and evt.value > 0:
+                    sys.exit()
+                elif evt.action == "toggle_viewer_sync" and evt.value > 0:
+                    self.enable_viewer_sync = not self.enable_viewer_sync
+
+            # fetch results
+            if self.device != 'cpu':
+                self.gym.fetch_results(self.sim, True)
+
+            # step graphics
+            if self.enable_viewer_sync:
+                self.gym.step_graphics(self.sim)
+                self.gym.render_all_camera_sensors(self.sim)
+                self.gym.draw_viewer(self.viewer, self.sim, True)
+                if sync_frame_time:
+                    self.gym.sync_frame_time(self.sim)
+            else:
+                self.gym.poll_viewer_events(self.viewer)
