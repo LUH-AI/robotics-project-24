@@ -18,6 +18,9 @@ from .compatible_legged_robot import CompatibleLeggedRobot
 GO2DefaultCfg()
 # do CONFIGURABLE adaptations in this file
 
+import numpy as np
+
+
 
 # register all tasks derived from CustomLeggedRobot
 def register_task(
@@ -52,6 +55,26 @@ class CustomLeggedRobot(CompatibleLeggedRobot):
         super().__init__(cfg, sim_params, physics_engine, sim_device, headless)
         # for language server purposes only
         self.cfg: GO2DefaultCfg = self.cfg
+        # Parameters for video
+        frame_width = cfg.camera.width  # Replace with your actual frame width
+        frame_height = cfg.camera.height  # Replace with your actual frame height
+        fps = 30  # Frames per second
+
+        # Initialize video writer
+        self.output_file = "testmovie.mp4"
+        self.video_writer = cv2.VideoWriter(
+            self.output_file,  # Output file name
+            cv2.VideoWriter_fourcc(*'mp4v'),  # Codec
+            fps,  # Frames per second
+            (frame_width, frame_height)  # Frame size
+        )
+        self.frames = []
+
+    def __del__(self):
+        if self.video_writer:
+            print("Destructor called, releasing video writer...")
+            self.video_writer.release()
+            print(f"Video saved as {self.output_file}")
 
     def _prepare_camera(self, camera):
         print("Preparing")
@@ -60,6 +83,7 @@ class CustomLeggedRobot(CompatibleLeggedRobot):
         self.camera_props.width = camera.width
         self.camera_props.height = camera.height
         self.camera_props.enable_tensors = camera.enable_tensors
+        self.camera_props.use_collision_geometry = True
 
     def _create_ground_plane(self):
         """Adds a ground plane to the simulation, sets friction and restitution based on the cfg.
@@ -137,9 +161,12 @@ class CustomLeggedRobot(CompatibleLeggedRobot):
         # add perceptive inputs if not blind
         # add noise if needed
         image = self.gym.get_camera_image(
-            self.sim, self.envs[0], self.cameras[0], gymapi.IMAGE_DEPTH
+            self.sim, self.envs[0], self.cameras[0], gymapi.IMAGE_COLOR
         )
         print(image)
+        image = np.reshape(image, (self.cfg.camera.height, self.cfg.camera.width, 4))
+        image_bgr = cv2.cvtColor(image, cv2.COLOR_RGBA2BGR)
+        self.video_writer.write(image_bgr)
 
         if self.add_noise:
             self.obs_buf += (
@@ -253,12 +280,8 @@ class CustomLeggedRobot(CompatibleLeggedRobot):
             # ADD Camera Functionality
             camera_handle = self.gym.create_camera_sensor(env_handle, self.camera_props)
             local_transform = gymapi.Transform()
-            local_transform.p = gymapi.Vec3(
-                0, 0, 10
-            )  # TODO: Parameters in Config - and find out correct values
-            local_transform.r = gymapi.Quat.from_axis_angle(
-                gymapi.Vec3(0, 1, 0), np.radians(45.0)
-            )  # TODO: SAME here as above
+            local_transform.p = self.cfg.camera.vec_from_body_center
+            local_transform.r = self.cfg.camera.rot_of_camera
             self.gym.attach_camera_to_body(
                 camera_handle,
                 env_handle,
