@@ -118,7 +118,8 @@ def get_configs(
     scenes = {
         "ground_plane": scene_configs.BaseSceneCfg(),
         "plant_environment": scene_configs.PlantEnvironmentCfg(),
-        "empty_room": scene_configs.EmptyRoomCfg(),
+        "empty_room_10x10": scene_configs.EmptyRoom10x10Cfg(),
+        "empty_room_5x5": scene_configs.EmptyRoom5x5Cfg(),
     }
     algorithms = {
         "ppo_default": alg_configs.PPODefaultCfg(),

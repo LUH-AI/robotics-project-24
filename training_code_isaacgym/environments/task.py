@@ -33,7 +33,7 @@ def register_task(
 
     # add scene_cfg to robot_cfg for compatibility with task_registry
     robot_cfg.scene = scene_cfg
-    robot_cfg.env.env_spacing = scene_cfg.size
+    robot_cfg.env.env_spacing = scene_cfg.size + scene_cfg.spacing
     algorithm_cfg.runner.experiment_name = name
     task_registry.register(name, CustomLeggedRobot, robot_cfg, algorithm_cfg)
     return name

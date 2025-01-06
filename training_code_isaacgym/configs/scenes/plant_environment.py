@@ -3,13 +3,13 @@ from pathlib import Path
 from . import BaseSceneCfg, StaticObject
 
 asset_path = Path(__file__).parents[2] / "assets/scenes/plant_environment"
-urdf_path = asset_path / "urdf" / "walls.urdf"
+urdf_path = asset_path / "urdf" / "walls_10x10.urdf"
 plant_path = asset_path / "urdf" / "plant1.urdf"
 chair_path = asset_path / "urdf" / "chair1.urdf"
 
 class PlantEnvironmentCfg(BaseSceneCfg):
-    name = "empty_room"
-    size: float = 11.0
+    name = "plant_environment"
+    size: float = 10.0
     max_range = 3.5
     min_distance = 0.9
 

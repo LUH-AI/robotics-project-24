@@ -55,3 +55,4 @@ class BaseSceneCfg:
     static_objects: List[StaticObject] = []
     # initial_robot_position: Location = ...
     size: float = 3.0
+    spacing: float = 1.0
