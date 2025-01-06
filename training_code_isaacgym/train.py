@@ -117,6 +117,7 @@ def get_configs(
     }
     scenes = {
         "ground_plane": scene_configs.BaseSceneCfg(),
+        "plant_environment": scene_configs.PlantEnvironmentCfg(),
         "empty_room": scene_configs.EmptyRoomCfg(),
     }
     algorithms = {
