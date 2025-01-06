@@ -133,7 +133,7 @@ class CompatibleLeggedRobot(LeggedRobot, ABC):
 
             # add static objects/ actors to environment
             # function is only
-            self._place_static_objects(i, env_handle)
+            self._place_static_objects(i, env_handle, robot_position=pos)
 
         self.feet_indices = torch.zeros(
             len(feet_names), dtype=torch.long, device=self.device, requires_grad=False

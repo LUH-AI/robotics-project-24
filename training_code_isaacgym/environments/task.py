@@ -1,4 +1,5 @@
 from typing import Any
+import warnings
 
 import torch
 from isaacgym import gymapi
@@ -59,16 +60,36 @@ class CustomLeggedRobot(CompatibleLeggedRobot):
         plane_params.segmentation_id = 1  # added for compatibility
         self.gym.add_ground(self.sim, plane_params)
 
-    def _place_static_objects(self, env_idx: int, env_handle: Any):
+    def _calculate_random_location(self, location_offset: torch.Tensor, init_location: torch.Tensor, max_random_loc_offset: torch.Tensor) -> torch.Tensor:
+        random_loc_offset = max_random_loc_offset * (torch.rand(max_random_loc_offset.shape, device=self.device) - 0.5) * 2
+        return init_location + location_offset + random_loc_offset
+    
+    def _validate_location(self, object, location, robot_location, other_object_locations, other_object_sizes) -> bool:
+        if (torch.abs((location - robot_location)[:2]) < 0.5).any(): #TODO size of robot
+            return False
+        for other_location, other_size in zip(other_object_locations, other_object_sizes):
+            if other_location != None and (torch.abs((location - other_location)[:2]) < ((other_size + object.size) / 2)[:2]).any():
+                return False
+        return True
+
+    def _place_static_objects(self, env_idx: int, env_handle: Any, robot_position: torch.Tensor):
         """Places static objects like walls into the provided environment
         It is called in the environment creation loop in super()._create_envs()
 
         Args:
             env_idx (int): Index of environment
             env_handle (Any): Environment handle
+            robot_position (torch.Tensor): Robot location
         """
         self.object_handles.append([])
+
         self.num_static_objects = len(self.cfg.scene.static_objects)
+
+        # move all tensors to device
+        for static_obj in self.cfg.scene.static_objects:
+            static_obj.to(self.device)
+        other_object_locations = []
+        other_object_sizes = []
         for object_idx, static_obj in enumerate(self.cfg.scene.static_objects):
             if len(self.object_assets) - 1 > object_idx:
                 obj_asset = self.object_assets[object_idx]
@@ -83,15 +104,19 @@ class CustomLeggedRobot(CompatibleLeggedRobot):
 
             start_pose = gymapi.Transform()
             location_offset = self.env_origins[env_idx].clone()
-            init_location = static_obj.init_location.to(self.device)
-            random_loc_offset = (
-                static_obj.max_random_loc_offset
-                * (torch.rand(static_obj.max_random_loc_offset.shape) - 0.5)
-                * 2
-            ).to(self.device)
-            start_pose.p = gymapi.Vec3(
-                *(init_location + location_offset + random_loc_offset)
-            )
+            i = 0
+            object_location = self._calculate_random_location(location_offset, static_obj.init_location, static_obj.max_random_loc_offset)
+            while i < 10 and static_obj.max_random_loc_offset.any():
+                object_location = self._calculate_random_location(location_offset, static_obj.init_location, static_obj.max_random_loc_offset)
+                if self._validate_location(static_obj, object_location, robot_position, other_object_locations, other_object_sizes):
+                    break
+                i += 1
+            if i == 10:
+                warnings.warn(f"Static object could not be placed randomly without collisions ({i} tries). This can cause problems")
+
+            other_object_locations.append(object_location)
+            other_object_sizes.append(static_obj.size)
+            start_pose.p = gymapi.Vec3(*object_location)
 
             # env_idx sets collision group, -1 default for collision_filter
             object_handle = self.gym.create_actor(

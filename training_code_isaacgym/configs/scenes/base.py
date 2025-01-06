@@ -16,8 +16,9 @@ class StaticObject:
         name: str,
         type: ObjectType,
         asset_path: Path,
-        init_location: Optional[Location] = None,
-        max_random_loc_offset: Optional[Location] = None,
+        init_location: Location = (0., 0., 0.),
+        max_random_loc_offset: Location = (0., 0., 0.),
+        size: Tuple[float, float, float] = (0., 0., 0.),
     ) -> None:
         """Create a static object
 
@@ -30,14 +31,10 @@ class StaticObject:
         """
         self.name: str = name
         self.type = type
-        self.init_location = (
-            torch.tensor(init_location) if init_location != None else torch.zeros(3)
-        )
-        self.max_random_loc_offset = (
-            torch.tensor(max_random_loc_offset)
-            if max_random_loc_offset != None
-            else torch.zeros(3)
-        )
+        self.init_location = torch.tensor(init_location)
+        self.max_random_loc_offset = torch.tensor(max_random_loc_offset)
+
+        self.size = torch.tensor(size)
 
         self.asset_path = asset_path
         self.asset_root = asset_path.parents[1]
@@ -48,6 +45,16 @@ class StaticObject:
 
         types = typing.get_args(ObjectType)
         self.segmentation_id: int = types.index(type)
+
+    def to(self, device: str):
+        """Moves all tensors in object to the provided device
+
+        Args:
+            device (str): Device of torch tensors
+        """
+        self.init_location = self.init_location.to(device)
+        self.max_random_loc_offset = self.max_random_loc_offset.to(device)
+        self.size = self.size.to(device)
 
 
 class BaseSceneCfg:
