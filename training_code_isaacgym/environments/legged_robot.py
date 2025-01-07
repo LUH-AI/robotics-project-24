@@ -53,8 +53,10 @@ class LeggedRobot(BaseTask):
         self._prepare_reward_function()
         self.init_done = True
 
-        # Download model if needed
-        self.depth_model = "model-f6b98070.pt"
+        # Load YOLOv5 model
+        model = torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True)
+        model.conf = 0.2  # Set confidence threshold
+        
         if not os.path.exists(self.depth_model):
             urllib.request.urlretrieve(
                 "https://github.com/intel-isl/MiDaS/releases/download/v2_1/model-f6b98070.pt",
@@ -177,103 +179,79 @@ class LeggedRobot(BaseTask):
         if self.cfg.env.send_timeouts:
             self.extras["time_outs"] = self.time_out_buf
     
-    def compute_reward(self):
-        """ Compute rewards
-            Calls each reward function which had a non-zero scale (processed in self._prepare_reward_function())
-            adds each terms to the episode sums and to the total reward
-        """
-        self.rew_buf[:] = 0.
-        for i in range(len(self.reward_functions)):
-            name = self.reward_names[i]
-            rew = self.reward_functions[i]() * self.reward_scales[name]
-            self.rew_buf += rew
-            self.episode_sums[name] += rew
-        if self.cfg.rewards.only_positive_rewards:
-            self.rew_buf[:] = torch.clip(self.rew_buf[:], min=0.)
-        # add termination reward after clipping
-        if "termination" in self.reward_scales:
-            rew = self._reward_termination() * self.reward_scales["termination"]
-            self.rew_buf += rew
-            self.episode_sums["termination"] += rew
-    
     def compute_observations(self):
-        """ Computes observations
-        """
-        self.obs_buf = torch.cat((  self.base_lin_vel * self.obs_scales.lin_vel,
-                                    self.base_ang_vel  * self.obs_scales.ang_vel,
-                                    self.projected_gravity,
-                                    self.commands[:, :3] * self.commands_scale,
-                                    (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
-                                    self.dof_vel * self.obs_scales.dof_vel,
-                                    self.actions,
-                                    ),dim=-1)
+        """Computes observations"""
+        # Get depth image from the camera
+        depth_image = self.gym.get_camera_image(
+            self.sim, self.envs[0], self.cameras[0], gymapi.IMAGE_DEPTH
+        )
         
-        image = self.gym.get_camera_image(self.sim, self.envs[0], self.cameras[0], gymapi.IMAGE_COLOR)
-        print(type(image))
-        cv2.imwrite("Test_robo_image.jpeg", image)        
-
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-        # Load MiDaS model
-        midas = MidasNet(self.depth_model, non_negative=True)
-        midas.to(device)
-        midas.eval()
-
-        # Use torchvision Compose since midas doesn't provide its own Compose
-        midas_transform = Compose(
-            [
-                Resize(
-                    384, 384,
-                    resize_method="upper_bound",
-                    image_interpolation_method=cv2.INTER_CUBIC,
-                ),
-                NormalizeImage(
-                    mean=[0.485, 0.456, 0.406],
-                    std=[0.229, 0.224, 0.225],
-                ),
-                PrepareForNet(),
-            ]
+        image = self.gym.get_camera_image(
+            self.sim, self.envs[0], self.cameras[0], gymapi.IMAGE_COLOR
         )
 
-         # image is BGRA, convert to BGR
-        img_bgr = cv2.cvtColor(image, cv2.COLOR_BGRA2BGR)
-        # Convert BGR to RGB for MiDaS
-        img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
+        # Camera settings
+        f_x = self.camera_props.horizontal_fov / (2 * np.tan(np.radians(self.camera_props.horizontal_fov / 2)))  # Focal length in pixels
+        f_y = f_x
+        c_x = self.camera_props.horizontal_fov / 2  # Principal point (x-axis)
+        c_y = self.camera_props.height / 2   # Principal point (y-axis)
 
-        # Provide a dummy mask to avoid KeyError
-        dummy_mask = np.ones((img_rgb.shape[0], img_rgb.shape[1]), dtype=np.uint8)
+        object_info = []
 
-        sample = {"image": img_rgb, "mask": dummy_mask}
-        transformed = midas_transform(sample)
+        # Run YOLO on the image
+        results = self.model(image)
+        detections = results.pandas().xyxy[0]
 
-        input_batch = torch.from_numpy(transformed["image"]).unsqueeze(0).to(device)
-
-        with torch.no_grad():
-            prediction = midas(input_batch)
-            prediction = torch.nn.functional.interpolate(
-                prediction.unsqueeze(1),
-                size=img_rgb.shape[:2],
-                mode="bicubic",
-                align_corners=False,
-            ).squeeze()
-
-        depth_map = prediction.cpu().numpy()
-
-        # Extract some depth features
-        depth_mean = torch.tensor([depth_map.mean()], device=self.device, dtype=torch.float32)
-        depth_min = torch.tensor([depth_map.min()], device=self.device, dtype=torch.float32)
-        depth_max = torch.tensor([depth_map.max()], device=self.device, dtype=torch.float32)
-
-        # Concatenate depth features into observations
-        self.obs_buf = torch.cat((self.obs_buf, depth_mean, depth_min, depth_max), dim=-1)
+        for index, row in detections.iterrows():
+            # Get bounding box coordinates
+            x1, y1, x2, y2 = int(row['xmin']), int(row['ymin']), int(row['xmax']), int(row['ymax'])
+            label = row['name']
         
-        print("Image Saved xD")
-        exit()
-        # add perceptive inputs if not blind
-        # add noise if needed
-        if self.add_noise:
-            self.obs_buf += (2 * torch.rand_like(self.obs_buf) - 1) * self.noise_scale_vec
+            # Compute the center of the bounding box
+            center_x = (x1 + x2) // 2
+            center_y = (y1 + y2) // 2
+            
+            # Get depth value (Z) at the center of the bounding box
+            Z = depth_image[center_y, center_x]
+        
+            # Compute the real-world coordinates (X, Y, Z)
+            X = (center_x - c_x) * Z / f_x
+            Y = (center_y - c_y) * Z / f_y
+        
+            # Calculate horizontal distance on the ground plane
+            distance = np.sqrt(X**2 + Z**2)
+        
+            # Calculate angle relative to the robot's forward direction
+            angle_deg = np.degrees(np.arctan2(X, Z))
+        
+            # Store the distance and angle in the list
+            object_info.append({
+                "label": label,
+                "distance": distance,
+                "angle": angle_deg
+            })
 
+        self.obs_buf = torch.cat(
+            (
+                self.base_lin_vel * self.obs_scales.lin_vel,
+                self.base_ang_vel * self.obs_scales.ang_vel,
+                self.projected_gravity,
+                self.commands[:, :3] * self.commands_scale,
+                (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
+                self.dof_vel * self.obs_scales.dof_vel,
+                self.actions
+            ),
+            dim=-1,
+        )
+
+        # All entries in torch.cat have dimensions, n_envs * n where you can determine n, but have to add it to n_obs in the configuration of the robot
+        # Add perceptive inputs if not blind
+        # Add noise if needed
+        if self.add_noise:
+            self.obs_buf += (
+                2 * torch.rand_like(self.obs_buf) - 1
+            ) * self.noise_scale_vec
+  
     def create_sim(self):
         """ Creates simulation, terrain and evironments
         """
