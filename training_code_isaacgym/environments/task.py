@@ -9,6 +9,8 @@ from ..configs.robots import GO2DefaultCfg
 from ..configs.scenes import BaseSceneCfg
 from ..configs.algorithms import PPODefaultCfg
 from .compatible_legged_robot import CompatibleLeggedRobot
+from rsl_rl.modules import ActorCritic
+from .util import load_low_level_policy
 
 GO2DefaultCfg()
 # do CONFIGURABLE adaptations in this file
@@ -132,6 +134,10 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         super().__init__(cfg, sim_params, physics_engine, sim_device, headless)
         # for language server purposes only
         self.cfg: GO2DefaultCfg = self.cfg
+
+        # Load low-level policy
+        self.low_level_policy = load_low_level_policy(cfg)
+        # use `self.low_level_policy.act(observations)` to get an action. See `ActorCritic` in rsl_rl/modules/actor_critic.py
 
     def _create_ground_plane(self):
         """Adds a ground plane to the simulation, sets friction and restitution based on the cfg.
