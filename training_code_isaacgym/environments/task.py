@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Callable
 import warnings
 
 import torch
@@ -17,7 +17,7 @@ GO2DefaultCfg()
 
 # register all tasks derived from CustomLeggedRobot
 def register_task(
-    robot_cfg: GO2DefaultCfg, scene_cfg: BaseSceneCfg, algorithm_cfg: PPODefaultCfg
+    robot_cfg: GO2DefaultCfg, scene_cfg: BaseSceneCfg, algorithm_cfg: PPODefaultCfg, robot_class: Callable
 ) -> str:
     """Register task based on robot, scene and algorithm configurations
     All configs need a name attribute.
@@ -36,7 +36,7 @@ def register_task(
     robot_cfg.scene = scene_cfg
     robot_cfg.env.env_spacing = scene_cfg.size + scene_cfg.spacing
     algorithm_cfg.runner.experiment_name = name
-    task_registry.register(name, CustomLeggedRobot, robot_cfg, algorithm_cfg)
+    task_registry.register(name, robot_class, robot_cfg, algorithm_cfg)
     return name
 
 
@@ -217,3 +217,190 @@ class CustomLeggedRobot(CompatibleLeggedRobot):
             ) * self.noise_scale_vec
 
     # add custom rewards... here (use your robot_cfg for control)
+
+
+class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
+    def __init__(
+        self, cfg: GO2DefaultCfg, sim_params, physics_engine, sim_device, headless
+    ):
+        super().__init__(cfg, sim_params, physics_engine, sim_device, headless)
+        # for language server purposes only
+        self.cfg: GO2DefaultCfg = self.cfg
+
+    def _create_ground_plane(self):
+        """Adds a ground plane to the simulation, sets friction and restitution based on the cfg.
+        Additionally, sets segmentation_id to 1 (index of ObjectType="ground")
+        """
+        plane_params = gymapi.PlaneParams()
+        plane_params.normal = gymapi.Vec3(0.0, 0.0, 1.0)
+        plane_params.static_friction = self.cfg.terrain.static_friction
+        plane_params.dynamic_friction = self.cfg.terrain.dynamic_friction
+        plane_params.restitution = self.cfg.terrain.restitution
+        plane_params.segmentation_id = 1  # added for compatibility
+        self.gym.add_ground(self.sim, plane_params)
+
+    def _calculate_random_location(
+        self,
+        location_offset: torch.Tensor,
+        init_location: torch.Tensor,
+        max_random_loc_offset: torch.Tensor,
+    ) -> torch.Tensor:
+        random_loc_offset = (
+            max_random_loc_offset
+            * (torch.rand(max_random_loc_offset.shape, device=self.device) - 0.5)
+            * 2
+        )
+        return init_location + location_offset + random_loc_offset
+
+    def _validate_location(
+        self,
+        object,
+        location,
+        robot_location,
+        other_object_locations,
+        other_object_sizes,
+    ) -> bool:
+        if (
+            torch.abs((location - robot_location)[:2]) < 0.5
+        ).any():  # TODO size of robot
+            return False
+        for other_location, other_size in zip(
+            other_object_locations, other_object_sizes
+        ):
+            if (
+                other_location != None
+                and (
+                    torch.abs((location - other_location)[:2])
+                    < ((other_size + object.size) / 2)[:2]
+                ).any()
+            ):
+                return False
+        return True
+
+    def _place_static_objects(
+        self, env_idx: int, env_handle: Any, robot_position: torch.Tensor
+    ):
+        """Places static objects like walls into the provided environment
+        It is called in the environment creation loop in super()._create_envs()
+
+        Args:
+            env_idx (int): Index of environment
+            env_handle (Any): Environment handle
+            robot_position (torch.Tensor): Robot location
+        """
+        self.object_handles.append([])
+
+        self.num_static_objects = len(self.cfg.scene.static_objects)
+
+        # move all tensors to device
+        for static_obj in self.cfg.scene.static_objects:
+            static_obj.to(self.device)
+
+        _plant_locations = []
+        other_object_locations = []
+        other_object_sizes = []
+        for object_idx, static_obj in enumerate(self.cfg.scene.static_objects):
+            if len(self.object_assets) - 1 > object_idx:
+                obj_asset = self.object_assets[object_idx]
+            else:
+                obj_asset = self.gym.load_asset(
+                    self.sim,
+                    str(static_obj.asset_root),
+                    str(static_obj.asset_file),
+                    static_obj.asset_options,
+                )
+                self.object_assets.append(obj_asset)
+
+            start_pose = gymapi.Transform()
+            location_offset = self.env_origins[env_idx].clone()
+            i = 0
+            object_location = self._calculate_random_location(
+                location_offset,
+                static_obj.init_location,
+                static_obj.max_random_loc_offset,
+            )
+            while i < 10 and static_obj.max_random_loc_offset.any():
+                object_location = self._calculate_random_location(
+                    location_offset,
+                    static_obj.init_location,
+                    static_obj.max_random_loc_offset,
+                )
+                if self._validate_location(
+                    static_obj,
+                    object_location,
+                    robot_position,
+                    other_object_locations,
+                    other_object_sizes,
+                ):
+                    break
+                i += 1
+            if i == 10:
+                warnings.warn(
+                    f"Static object could not be placed randomly without collisions ({i} tries). This can cause problems"
+                )
+
+            other_object_locations.append(object_location)
+            other_object_sizes.append(static_obj.size)
+            if static_obj.type == "flower_pot":
+                _plant_locations.append(object_location)
+
+            start_pose.p = gymapi.Vec3(*object_location)
+
+            # env_idx sets collision group, -1 default for collision_filter
+            object_handle = self.gym.create_actor(
+                env_handle,
+                obj_asset,
+                start_pose,
+                static_obj.name,
+                env_idx,
+                -1,
+                static_obj.segmentation_id,
+            )
+            self.object_handles[env_idx].append(object_handle)
+
+        plant_locations = torch.stack(_plant_locations).unsqueeze(0)
+        if hasattr(self, "absolute_plant_locations"):
+            self.absolute_plant_locations = torch.cat(
+                (self.absolute_plant_locations, plant_locations)
+            )
+        else:
+            self.absolute_plant_locations = plant_locations
+
+    def compute_observations(self):
+        """ Computes observations
+        """
+        self.obs_buf = torch.cat((  self.base_lin_vel * self.obs_scales.lin_vel,
+                                    self.base_ang_vel  * self.obs_scales.ang_vel,
+                                    self.projected_gravity,
+                                    self.commands[:, :3] * self.commands_scale,
+                                    (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
+                                    self.dof_vel * self.obs_scales.dof_vel,
+                                    self.actions
+                                    ),dim=-1)
+        # All entries in torch.cat have dimensions, n_envs * n where you can determine n, but have to add it to n_obs in the configuration of the robot
+        # add perceptive inputs if not blind
+        # add noise if needed
+        if self.add_noise:
+            self.obs_buf += (2 * torch.rand_like(self.obs_buf) - 1) * self.noise_scale_vec
+
+    # add custom rewards... here (use your robot_cfg for control)
+
+    def step(self, actions):
+        """ Apply actions, simulate, call self.post_physics_step()
+
+        Args:
+            actions (torch.Tensor): Tensor of shape (num_envs, num_actions_per_env)
+        """
+        raise NotImplementedError
+        # Here we get high level actions and need to translate them to low level actions
+        modified_actions = actions
+        step_return = super().step(modified_actions)
+        return step_return
+
+    def get_observations(self):
+        raise NotImplementedError
+        # Here we get low level observations and need to transform them to high level observations
+        # This will probably also need customization of the configuration
+        observations = self.obs_buf
+        modified_observations = observations
+        return modified_observations
