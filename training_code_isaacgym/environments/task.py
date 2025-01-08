@@ -48,6 +48,13 @@ class CustomLeggedRobot(CompatibleLeggedRobot):
         # for language server purposes only
         self.cfg: GO2DefaultCfg = self.cfg
 
+        self.absolute_plant_locations: torch.Tensor
+        """
+        Absolute locations of plants in each environment
+        shape: (|environments| x |plants_per_env| x 3)
+        (Attribute is instantiated in self._place_static_objects())
+        """
+
     def _create_ground_plane(self):
         """Adds a ground plane to the simulation, sets friction and restitution based on the cfg.
         Additionally, sets segmentation_id to 1 (index of ObjectType="ground")
@@ -88,6 +95,8 @@ class CustomLeggedRobot(CompatibleLeggedRobot):
         # move all tensors to device
         for static_obj in self.cfg.scene.static_objects:
             static_obj.to(self.device)
+
+        _plant_locations = []
         other_object_locations = []
         other_object_sizes = []
         for object_idx, static_obj in enumerate(self.cfg.scene.static_objects):
@@ -116,6 +125,9 @@ class CustomLeggedRobot(CompatibleLeggedRobot):
 
             other_object_locations.append(object_location)
             other_object_sizes.append(static_obj.size)
+            if static_obj.type == "flower_pot":
+                _plant_locations.append(object_location)
+
             start_pose.p = gymapi.Vec3(*object_location)
 
             # env_idx sets collision group, -1 default for collision_filter
@@ -129,6 +141,13 @@ class CustomLeggedRobot(CompatibleLeggedRobot):
                 static_obj.segmentation_id,
             )
             self.object_handles[env_idx].append(object_handle)
+
+        plant_locations = torch.stack(_plant_locations).unsqueeze(0)
+        if hasattr(self, "absolute_plant_locations"):
+            self.absolute_plant_locations = torch.cat((self.absolute_plant_locations, plant_locations))
+        else:
+            self.absolute_plant_locations = plant_locations
+
 
     def compute_observations(self):
         """ Computes observations

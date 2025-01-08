@@ -30,7 +30,7 @@ class StaticObject:
             max_random_loc_offset (Optional[Location]): maximal random absolute offset from x, y, z coordinates of init_location for environment/object initialization/reset
         """
         self.name: str = name
-        self.type = type
+        self.type: ObjectType = type
         self.init_location = torch.tensor(init_location)
         self.max_random_loc_offset = torch.tensor(max_random_loc_offset)
 
