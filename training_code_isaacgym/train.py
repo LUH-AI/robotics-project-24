@@ -140,7 +140,12 @@ def get_configs(
         "go2_default_class": task.CustomLeggedRobot,
         "go2_high-level-policy_plant_class": task.HighLevelPlantPolicyLeggedRobot,
     }
-    return robots[args.robot], scenes[args.scene], algorithms[args.algorithm], robot_class[args.robot_class]
+    return (
+        robots[args.robot],
+        scenes[args.scene],
+        algorithms[args.algorithm],
+        robot_class[args.robot_class],
+    )
 
 
 def train(task_name, args):

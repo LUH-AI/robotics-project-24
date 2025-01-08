@@ -19,7 +19,10 @@ GO2DefaultCfg()
 
 # register all tasks derived from CustomLeggedRobot
 def register_task(
-    robot_cfg: GO2DefaultCfg, scene_cfg: BaseSceneCfg, algorithm_cfg: PPODefaultCfg, robot_class: Callable
+    robot_cfg: GO2DefaultCfg,
+    scene_cfg: BaseSceneCfg,
+    algorithm_cfg: PPODefaultCfg,
+    robot_class: Callable,
 ) -> str:
     """Register task based on robot, scene and algorithm configurations
     All configs need a name attribute.
@@ -98,26 +101,31 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         """
 
     def compute_observations(self):
-        """ Computes observations
-        """
-        self.obs_buf = torch.cat((  self.base_lin_vel * self.obs_scales.lin_vel,
-                                    self.base_ang_vel  * self.obs_scales.ang_vel,
-                                    self.projected_gravity,
-                                    self.commands[:, :3] * self.commands_scale,
-                                    (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
-                                    self.dof_vel * self.obs_scales.dof_vel,
-                                    self.actions
-                                    ),dim=-1)
+        """Computes observations"""
+        self.obs_buf = torch.cat(
+            (
+                self.base_lin_vel * self.obs_scales.lin_vel,
+                self.base_ang_vel * self.obs_scales.ang_vel,
+                self.projected_gravity,
+                self.commands[:, :3] * self.commands_scale,
+                (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
+                self.dof_vel * self.obs_scales.dof_vel,
+                self.actions,
+            ),
+            dim=-1,
+        )
         # All entries in torch.cat have dimensions, n_envs * n where you can determine n, but have to add it to n_obs in the configuration of the robot
         # add perceptive inputs if not blind
         # add noise if needed
         if self.add_noise:
-            self.obs_buf += (2 * torch.rand_like(self.obs_buf) - 1) * self.noise_scale_vec
+            self.obs_buf += (
+                2 * torch.rand_like(self.obs_buf) - 1
+            ) * self.noise_scale_vec
 
     # add custom rewards... here (use your robot_cfg for control)
 
     def step(self, actions):
-        """ Apply actions, simulate, call self.post_physics_step()
+        """Apply actions, simulate, call self.post_physics_step()
 
         Args:
             actions (torch.Tensor): Tensor of shape (num_envs, num_actions_per_env)
