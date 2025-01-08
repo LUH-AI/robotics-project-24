@@ -4,7 +4,7 @@ from . import BaseSceneCfg, StaticObject
 
 
 asset_path = Path(__file__).parents[2] / "assets/scenes/single_plant"
-wall_path = asset_path / "urdf" / "walls_5x5.urdf"
+wall_path = asset_path / "urdf" / "ceiled_walls_5x5x3.urdf"
 plant_path = asset_path / "urdf" / "plant1.urdf"
 
 
