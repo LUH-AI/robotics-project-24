@@ -1,0 +1,13 @@
+train: ../train/images
+val: ../valid/images
+test: ../test/images
+
+nc: 2
+names: ['56', '58']
+
+roboflow:
+  workspace: flo-zb6ou
+  project: plant-jrolg
+  version: 2
+  license: MIT
+  url: https://universe.roboflow.com/flo-zb6ou/plant-jrolg/dataset/2
