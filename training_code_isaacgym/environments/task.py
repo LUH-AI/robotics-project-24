@@ -67,19 +67,47 @@ class CustomLeggedRobot(CompatibleLeggedRobot):
         plane_params.segmentation_id = 1  # added for compatibility
         self.gym.add_ground(self.sim, plane_params)
 
-    def _calculate_random_location(self, location_offset: torch.Tensor, init_location: torch.Tensor, max_random_loc_offset: torch.Tensor) -> torch.Tensor:
-        random_loc_offset = max_random_loc_offset * (torch.rand(max_random_loc_offset.shape, device=self.device) - 0.5) * 2
+    def _calculate_random_location(
+        self,
+        location_offset: torch.Tensor,
+        init_location: torch.Tensor,
+        max_random_loc_offset: torch.Tensor,
+    ) -> torch.Tensor:
+        random_loc_offset = (
+            max_random_loc_offset
+            * (torch.rand(max_random_loc_offset.shape, device=self.device) - 0.5)
+            * 2
+        )
         return init_location + location_offset + random_loc_offset
-    
-    def _validate_location(self, object, location, robot_location, other_object_locations, other_object_sizes) -> bool:
-        if (torch.abs((location - robot_location)[:2]) < 0.5).any(): #TODO size of robot
+
+    def _validate_location(
+        self,
+        object,
+        location,
+        robot_location,
+        other_object_locations,
+        other_object_sizes,
+    ) -> bool:
+        if (
+            torch.abs((location - robot_location)[:2]) < 0.5
+        ).any():  # TODO size of robot
             return False
-        for other_location, other_size in zip(other_object_locations, other_object_sizes):
-            if other_location != None and (torch.abs((location - other_location)[:2]) < ((other_size + object.size) / 2)[:2]).any():
+        for other_location, other_size in zip(
+            other_object_locations, other_object_sizes
+        ):
+            if (
+                other_location != None
+                and (
+                    torch.abs((location - other_location)[:2])
+                    < ((other_size + object.size) / 2)[:2]
+                ).any()
+            ):
                 return False
         return True
 
-    def _place_static_objects(self, env_idx: int, env_handle: Any, robot_position: torch.Tensor):
+    def _place_static_objects(
+        self, env_idx: int, env_handle: Any, robot_position: torch.Tensor
+    ):
         """Places static objects like walls into the provided environment
         It is called in the environment creation loop in super()._create_envs()
 
@@ -114,14 +142,30 @@ class CustomLeggedRobot(CompatibleLeggedRobot):
             start_pose = gymapi.Transform()
             location_offset = self.env_origins[env_idx].clone()
             i = 0
-            object_location = self._calculate_random_location(location_offset, static_obj.init_location, static_obj.max_random_loc_offset)
+            object_location = self._calculate_random_location(
+                location_offset,
+                static_obj.init_location,
+                static_obj.max_random_loc_offset,
+            )
             while i < 10 and static_obj.max_random_loc_offset.any():
-                object_location = self._calculate_random_location(location_offset, static_obj.init_location, static_obj.max_random_loc_offset)
-                if self._validate_location(static_obj, object_location, robot_position, other_object_locations, other_object_sizes):
+                object_location = self._calculate_random_location(
+                    location_offset,
+                    static_obj.init_location,
+                    static_obj.max_random_loc_offset,
+                )
+                if self._validate_location(
+                    static_obj,
+                    object_location,
+                    robot_position,
+                    other_object_locations,
+                    other_object_sizes,
+                ):
                     break
                 i += 1
             if i == 10:
-                warnings.warn(f"Static object could not be placed randomly without collisions ({i} tries). This can cause problems")
+                warnings.warn(
+                    f"Static object could not be placed randomly without collisions ({i} tries). This can cause problems"
+                )
 
             other_object_locations.append(object_location)
             other_object_sizes.append(static_obj.size)
@@ -144,26 +188,32 @@ class CustomLeggedRobot(CompatibleLeggedRobot):
 
         plant_locations = torch.stack(_plant_locations).unsqueeze(0)
         if hasattr(self, "absolute_plant_locations"):
-            self.absolute_plant_locations = torch.cat((self.absolute_plant_locations, plant_locations))
+            self.absolute_plant_locations = torch.cat(
+                (self.absolute_plant_locations, plant_locations)
+            )
         else:
             self.absolute_plant_locations = plant_locations
 
-
     def compute_observations(self):
-        """ Computes observations
-        """
-        self.obs_buf = torch.cat((  self.base_lin_vel * self.obs_scales.lin_vel,
-                                    self.base_ang_vel  * self.obs_scales.ang_vel,
-                                    self.projected_gravity,
-                                    self.commands[:, :3] * self.commands_scale,
-                                    (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
-                                    self.dof_vel * self.obs_scales.dof_vel,
-                                    self.actions
-                                    ),dim=-1)
+        """Computes observations"""
+        self.obs_buf = torch.cat(
+            (
+                self.base_lin_vel * self.obs_scales.lin_vel,
+                self.base_ang_vel * self.obs_scales.ang_vel,
+                self.projected_gravity,
+                self.commands[:, :3] * self.commands_scale,
+                (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
+                self.dof_vel * self.obs_scales.dof_vel,
+                self.actions,
+            ),
+            dim=-1,
+        )
         # All entries in torch.cat have dimensions, n_envs * n where you can determine n, but have to add it to n_obs in the configuration of the robot
         # add perceptive inputs if not blind
         # add noise if needed
         if self.add_noise:
-            self.obs_buf += (2 * torch.rand_like(self.obs_buf) - 1) * self.noise_scale_vec
+            self.obs_buf += (
+                2 * torch.rand_like(self.obs_buf) - 1
+            ) * self.noise_scale_vec
 
     # add custom rewards... here (use your robot_cfg for control)

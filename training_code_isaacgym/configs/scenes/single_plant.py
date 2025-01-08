@@ -17,11 +17,11 @@ class SinglePlantCfg(BaseSceneCfg):
             wall_path,
         ),
         StaticObject(
-                "flower",
-                "flower_pot",
-                plant_path,
-                max_random_loc_offset=(2.3, 2.3, 0),
-                size=(0.125, 0.125, 0.3),
-            ),
+            "flower",
+            "flower_pot",
+            plant_path,
+            max_random_loc_offset=(2.3, 2.3, 0),
+            size=(0.125, 0.125, 0.3),
+        ),
     ]
     size = 5.0

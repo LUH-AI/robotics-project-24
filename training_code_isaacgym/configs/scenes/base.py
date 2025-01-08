@@ -16,9 +16,9 @@ class StaticObject:
         name: str,
         type: ObjectType,
         asset_path: Path,
-        init_location: Location = (0., 0., 0.),
-        max_random_loc_offset: Location = (0., 0., 0.),
-        size: Tuple[float, float, float] = (0., 0., 0.),
+        init_location: Location = (0.0, 0.0, 0.0),
+        max_random_loc_offset: Location = (0.0, 0.0, 0.0),
+        size: Tuple[float, float, float] = (0.0, 0.0, 0.0),
     ) -> None:
         """Create a static object
 
