@@ -5,7 +5,7 @@ from ..scenes import BaseSceneCfg
 
 # this is the GO2RoughCfg copied from unitree_rl_gym repo (do not change, create a new file)
 class GO2HighLevelPlantPolicyCfg(LeggedRobotCfg):
-    name = "go2_default"
+    name = "go2_high-level-plant-policy"
 
     class init_state(LeggedRobotCfg.init_state):
         pos = [0.0, 0.0, 0.42]  # x,y,z [m]
@@ -47,6 +47,8 @@ class GO2HighLevelPlantPolicyCfg(LeggedRobotCfg):
         base_height_target = 0.25
 
         class scales(LeggedRobotCfg.rewards.scales):
+            # only rewards that have a scale will be added (reward is named "_reward_{SCALE_NAME}")
+            # [TODO: remove these reward scales, as their reward is not relevant for the high level policy anymore (left for now to h ave dummy values)]
             torques = -0.0002
             dof_pos_limits = -10.0
 
