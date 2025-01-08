@@ -22,8 +22,11 @@ from . import task_utils
 
 
 class CompatibleLeggedRobot(LeggedRobot, ABC):
+    """This class should not be called directly"""
 
-    def _place_static_objects(self, env_idx: int, env_handle: Any, robot_position: torch.Tensor):
+    def _place_static_objects(
+        self, env_idx: int, env_handle: Any, robot_position: torch.Tensor
+    ):
         """Places static objects like walls into the provided environment
         It is called in the environment creation loop in super()._create_envs()
 
@@ -32,6 +35,8 @@ class CompatibleLeggedRobot(LeggedRobot, ABC):
             env_handle (Any): Environment handle
             robot_position (torch.Tensor): Robot location
         """
+        if not len(self.cfg.scene.static_objects):
+            return
         self.object_handles.append([])
 
         self.num_static_objects = len(self.cfg.scene.static_objects)
