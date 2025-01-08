@@ -126,7 +126,10 @@ def get_configs(
     }
     scenes = {
         "ground_plane": scene_configs.BaseSceneCfg(),
-        "empty_room": scene_configs.EmptyRoomCfg(),
+        "empty_room_10x10": scene_configs.EmptyRoom10x10Cfg(),
+        "empty_room_5x5": scene_configs.EmptyRoom5x5Cfg(),
+        "plant_environment": scene_configs.PlantEnvironmentCfg(),
+        "single_plant": scene_configs.SinglePlantCfg(),
     }
     algorithms = {
         "ppo_default": alg_configs.PPODefaultCfg(),
@@ -137,7 +140,12 @@ def get_configs(
         "go2_default_class": task.CustomLeggedRobot,
         "go2_high-level-policy_plant_class": task.HighLevelPlantPolicyLeggedRobot,
     }
-    return robots[args.robot], scenes[args.scene], algorithms[args.algorithm], robot_class[args.robot_class]
+    return (
+        robots[args.robot],
+        scenes[args.scene],
+        algorithms[args.algorithm],
+        robot_class[args.robot_class],
+    )
 
 
 def train(task_name, args):
