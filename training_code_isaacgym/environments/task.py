@@ -56,12 +56,6 @@ class CustomLeggedRobot(CompatibleLeggedRobot):
         # for language server purposes only
         self.cfg: GO2DefaultCfg = self.cfg
 
-    def __del__(self):
-        if self.video_writer:
-            print("Destructor called, releasing video writer...")
-            self.video_writer.release()
-            print(f"Video saved as {self.output_file}")
-
     def _create_ground_plane(self):
         """Adds a ground plane to the simulation, sets friction and restitution based on the cfg.
         Additionally, sets segmentation_id to 1 (index of ObjectType="ground")
@@ -122,10 +116,6 @@ class CustomLeggedRobot(CompatibleLeggedRobot):
 
     def compute_observations(self):
         """Computes observations"""
-        image = self.gym.get_camera_image(
-            self.sim, self.envs[0], self.cameras[0], gymapi.IMAGE_DEPTH
-        )
-        #TODO: Add Distance measure to observation / preprocess it to a good range. Currently: -inf = infinitely far away and -0.1 is 10cm away
         self.obs_buf = torch.cat(
             (
                 self.base_lin_vel * self.obs_scales.lin_vel,
@@ -399,6 +389,10 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         return step_return
 
     def get_observations(self):
+        depth_arrays = torch.tensor([self.gym.get_camera_image(
+            self.sim, self.envs[i], self.cameras[i], gymapi.IMAGE_DEPTH
+        ) for i in range(len(self.cameras))]) # Has shape (num_envs, 12) TODO: Check if extra dimension somehow sneaked in
+        #TODO: Add Distance measure to observation / preprocess it to a good range. Currently: -inf = infinitely far away and -0.1 is 10cm away
         raise NotImplementedError
         # Here we get low level observations and need to transform them to high level observations
         # This will probably also need customization of the configuration
@@ -415,102 +409,10 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
            2.3 create actor with these properties and add them to the env
         3. Store indices of different bodies of the robot
         """
-        asset_path = self.cfg.asset.file.format(LEGGED_GYM_ROOT_DIR=LEGGED_GYM_ROOT_DIR)
-        asset_root = os.path.dirname(asset_path)
-        asset_file = os.path.basename(asset_path)
-
-        asset_options = gymapi.AssetOptions()
-        asset_options.default_dof_drive_mode = self.cfg.asset.default_dof_drive_mode
-        asset_options.collapse_fixed_joints = self.cfg.asset.collapse_fixed_joints
-        asset_options.replace_cylinder_with_capsule = (
-            self.cfg.asset.replace_cylinder_with_capsule
-        )
-        asset_options.flip_visual_attachments = self.cfg.asset.flip_visual_attachments
-        asset_options.fix_base_link = self.cfg.asset.fix_base_link
-        asset_options.density = self.cfg.asset.density
-        asset_options.angular_damping = self.cfg.asset.angular_damping
-        asset_options.linear_damping = self.cfg.asset.linear_damping
-        asset_options.max_angular_velocity = self.cfg.asset.max_angular_velocity
-        asset_options.max_linear_velocity = self.cfg.asset.max_linear_velocity
-        asset_options.armature = self.cfg.asset.armature
-        asset_options.thickness = self.cfg.asset.thickness
-        asset_options.disable_gravity = self.cfg.asset.disable_gravity
-
-        robot_asset = self.gym.load_asset(
-            self.sim, asset_root, asset_file, asset_options
-        )
-        self.num_dof = self.gym.get_asset_dof_count(robot_asset)
-        self.num_bodies = self.gym.get_asset_rigid_body_count(robot_asset)
-        dof_props_asset = self.gym.get_asset_dof_properties(robot_asset)
-        rigid_shape_props_asset = self.gym.get_asset_rigid_shape_properties(robot_asset)
-
-        # save body names from the asset
-        body_names = self.gym.get_asset_rigid_body_names(robot_asset)
-        self.dof_names = self.gym.get_asset_dof_names(robot_asset)
-        self.num_bodies = len(body_names)
-        self.num_dofs = len(self.dof_names)
-        feet_names = [s for s in body_names if self.cfg.asset.foot_name in s]
-        penalized_contact_names = []
-        for name in self.cfg.asset.penalize_contacts_on:
-            penalized_contact_names.extend([s for s in body_names if name in s])
-        termination_contact_names = []
-        for name in self.cfg.asset.terminate_after_contacts_on:
-            termination_contact_names.extend([s for s in body_names if name in s])
-
-        base_init_state_list = (
-            self.cfg.init_state.pos
-            + self.cfg.init_state.rot
-            + self.cfg.init_state.lin_vel
-            + self.cfg.init_state.ang_vel
-        )
-        self.base_init_state = to_torch(
-            base_init_state_list, device=self.device, requires_grad=False
-        )
-        start_pose = gymapi.Transform()
-        start_pose.p = gymapi.Vec3(*self.base_init_state[:3])
-
-        self._get_env_origins()
-        env_lower = gymapi.Vec3(0.0, 0.0, 0.0)
-        env_upper = gymapi.Vec3(0.0, 0.0, 0.0)
-        self.actor_handles = []
-        self.envs = []
+        super()._create_envs()
+        # ADD Camera Functionality
         self.cameras = []
-        self.object_handles: List[List[Any]] = []  # TODO add type for handle
-        self.object_assets: List[Any] = []  # TODO add type for gym asset
-        for i in range(self.num_envs):
-            # create env instance
-            env_handle = self.gym.create_env(
-                self.sim, env_lower, env_upper, int(np.sqrt(self.num_envs))
-            )
-            pos = self.env_origins[i].clone()
-            pos[:2] += torch_rand_float(-1.0, 1.0, (2, 1), device=self.device).squeeze(
-                1
-            )
-            start_pose.p = gymapi.Vec3(*pos)
-
-            rigid_shape_props = self._process_rigid_shape_props(
-                rigid_shape_props_asset, i
-            )
-            self.gym.set_asset_rigid_shape_properties(robot_asset, rigid_shape_props)
-            actor_handle = self.gym.create_actor(
-                env_handle,
-                robot_asset,
-                start_pose,
-                self.cfg.asset.name,
-                i,
-                self.cfg.asset.self_collisions,
-                0,
-            )
-            dof_props = self._process_dof_props(dof_props_asset, i)
-            self.gym.set_actor_dof_properties(env_handle, actor_handle, dof_props)
-            body_props = self.gym.get_actor_rigid_body_properties(
-                env_handle, actor_handle
-            )
-            body_props = self._process_rigid_body_props(body_props, i)
-            self.gym.set_actor_rigid_body_properties(
-                env_handle, actor_handle, body_props, recomputeInertia=True
-            )
-            # ADD Camera Functionality
+        for env_handle, actor_handle in zip(self.envs, self.actor_handles):
             camera_handle = self.gym.create_camera_sensor(env_handle, self.camera_props)
             local_transform = gymapi.Transform()
             local_transform.p = self.cfg.camera.vec_from_body_center
@@ -523,66 +425,8 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
                 gymapi.FOLLOW_TRANSFORM,
             )
             self.cameras.append(camera_handle)
-            self.envs.append(env_handle)
-            self.actor_handles.append(actor_handle)
-
-            # add static objects/ actors to environment
-            # function is only
-            self._place_static_objects(i, env_handle)
-
-        self.feet_indices = torch.zeros(
-            len(feet_names), dtype=torch.long, device=self.device, requires_grad=False
-        )
-        for i in range(len(feet_names)):
-            self.feet_indices[i] = self.gym.find_actor_rigid_body_handle(
-                self.envs[0], self.actor_handles[0], feet_names[i]
-            )
-
-        self.penalised_contact_indices = torch.zeros(
-            len(penalized_contact_names),
-            dtype=torch.long,
-            device=self.device,
-            requires_grad=False,
-        )
-        for i in range(len(penalized_contact_names)):
-            self.penalised_contact_indices[i] = self.gym.find_actor_rigid_body_handle(
-                self.envs[0], self.actor_handles[0], penalized_contact_names[i]
-            )
-
-        self.termination_contact_indices = torch.zeros(
-            len(termination_contact_names),
-            dtype=torch.long,
-            device=self.device,
-            requires_grad=False,
-        )
-        for i in range(len(termination_contact_names)):
-            self.termination_contact_indices[i] = self.gym.find_actor_rigid_body_handle(
-                self.envs[0], self.actor_handles[0], termination_contact_names[i]
-            )
-
+    
     def render(self, sync_frame_time=True):
-        if self.viewer:
-            # check for window closed
-            if self.gym.query_viewer_has_closed(self.viewer):
-                sys.exit()
-
-            # check for keyboard events
-            for evt in self.gym.query_viewer_action_events(self.viewer):
-                if evt.action == "QUIT" and evt.value > 0:
-                    sys.exit()
-                elif evt.action == "toggle_viewer_sync" and evt.value > 0:
-                    self.enable_viewer_sync = not self.enable_viewer_sync
-
-            # fetch results
-            if self.device != 'cpu':
-                self.gym.fetch_results(self.sim, True)
-
-            # step graphics
-            if self.enable_viewer_sync:
-                self.gym.step_graphics(self.sim)
-                self.gym.render_all_camera_sensors(self.sim)
-                self.gym.draw_viewer(self.viewer, self.sim, True)
-                if sync_frame_time:
-                    self.gym.sync_frame_time(self.sim)
-            else:
-                self.gym.poll_viewer_events(self.viewer)
+        super().render(sync_frame_time)
+        # This renders all cameras each simulation step
+        self.gym.render_all_camera_sensors(self.sim)
