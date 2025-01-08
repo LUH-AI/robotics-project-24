@@ -163,7 +163,14 @@ class LeggedRobot(BaseTask):
         # send timeout info to the algorithm
         if self.cfg.env.send_timeouts:
             self.extras["time_outs"] = self.time_out_buf
-    
+
+        self.episode_sums["base_height_tracking"] = torch.zeros(self.num_envs, dtype=torch.float, device=self.device,
+                                                                requires_grad=False)
+        self.episode_sums["base_pitch_tracking"] = torch.zeros(self.num_envs, dtype=torch.float, device=self.device,
+                                                               requires_grad=False)
+        self.episode_sums["base_role_tracking"] = torch.zeros(self.num_envs, dtype=torch.float, device=self.device,
+                                                              requires_grad=False)
+
     def compute_reward(self):
         """ Compute rewards
             Calls each reward function which had a non-zero scale (processed in self._prepare_reward_function())
@@ -182,7 +189,15 @@ class LeggedRobot(BaseTask):
             rew = self._reward_termination() * self.reward_scales["termination"]
             self.rew_buf += rew
             self.episode_sums["termination"] += rew
-    
+        # New rewards
+        if "base_height_tracking" in self.reward_scales:
+            self.rew_buf += self._reward_base_height_tracking() * self.reward_scales["base_height_tracking"]
+        if "base_pitch_tracking" in self.reward_scales:
+            self.rew_buf += self._reward_base_pitch_tracking() * self.reward_scales["base_pitch_tracking"]
+        if "base_role_tracking" in self.reward_scales:
+            self.rew_buf += self._reward_base_roll_tracking() * self.reward_scales["base_role_tracking"]
+
+
     def compute_observations(self):
         """ Computes observations
         """
@@ -308,15 +323,36 @@ class LeggedRobot(BaseTask):
         Args:
             env_ids (List[int]): Environments ids for which new commands are needed
         """
-        self.commands[env_ids, 0] = torch_rand_float(self.command_ranges["lin_vel_x"][0], self.command_ranges["lin_vel_x"][1], (len(env_ids), 1), device=self.device).squeeze(1)
-        self.commands[env_ids, 1] = torch_rand_float(self.command_ranges["lin_vel_y"][0], self.command_ranges["lin_vel_y"][1], (len(env_ids), 1), device=self.device).squeeze(1)
-        if self.cfg.commands.heading_command:
-            self.commands[env_ids, 3] = torch_rand_float(self.command_ranges["heading"][0], self.command_ranges["heading"][1], (len(env_ids), 1), device=self.device).squeeze(1)
-        else:
-            self.commands[env_ids, 2] = torch_rand_float(self.command_ranges["ang_vel_yaw"][0], self.command_ranges["ang_vel_yaw"][1], (len(env_ids), 1), device=self.device).squeeze(1)
+        self.commands[env_ids, 0] = torch_rand_float(self.command_ranges["lin_vel_x"][0],
+                                                     self.command_ranges["lin_vel_x"][1], (len(env_ids), 1),
+                                                     device=self.device).squeeze(1)
+        self.commands[env_ids, 1] = torch_rand_float(self.command_ranges["lin_vel_y"][0],
+                                                     self.command_ranges["lin_vel_y"][1], (len(env_ids), 1),
+                                                     device=self.device).squeeze(1)
+        self.commands[env_ids, 2] = torch_rand_float(self.command_ranges["ang_vel_yaw"][0],
+                                                     self.command_ranges["ang_vel_yaw"][1], (len(env_ids), 1),
+                                                     device=self.device).squeeze(1)
+        self.commands[env_ids, 3] = torch_rand_float(self.command_ranges["base_height"][0],
+                                                     self.command_ranges["base_height"][1], (len(env_ids), 1),
+                                                     device=self.device).squeeze(1)
+        self.commands[env_ids, 4] = torch_rand_float(self.command_ranges["base_pitch"][0],
+                                                         self.command_ranges["base_pitch"][1], (len(env_ids), 1),
+                                                         device=self.device).squeeze(1)
+        self.commands[env_ids, 5] = torch_rand_float(self.command_ranges["base_role"][0],
+                                                         self.command_ranges["base_role"][1], (len(env_ids), 1),
+                                                         device=self.device).squeeze(1)
 
-        # set small commands to zero
-        self.commands[env_ids, :2] *= (torch.norm(self.commands[env_ids, :2], dim=1) > 0.2).unsqueeze(1)
+        # With prob of 75 percent each command gets zerod out additionally (for stability reasons)
+        if np.random.random() < 0.75:
+            self.commands[env_ids, 0] = 0
+        if np.random.random() < 0.75:
+            self.commands[env_ids, 1] = 0
+        if np.random.random() < 0.75:
+            self.commands[env_ids, 2] = 0
+        if np.random.random() < 0.75:
+            self.commands[env_ids, 4] = 0
+        if np.random.random() < 0.75:
+            self.commands[env_ids, 5] = 0
 
     def _compute_torques(self, actions):
         """ Compute torques from actions.
@@ -417,10 +453,10 @@ class LeggedRobot(BaseTask):
         noise_vec[:3] = noise_scales.lin_vel * noise_level * self.obs_scales.lin_vel
         noise_vec[3:6] = noise_scales.ang_vel * noise_level * self.obs_scales.ang_vel
         noise_vec[6:9] = noise_scales.gravity * noise_level
-        noise_vec[9:12] = 0. # commands
-        noise_vec[12:12+self.num_actions] = noise_scales.dof_pos * noise_level * self.obs_scales.dof_pos
-        noise_vec[12+self.num_actions:12+2*self.num_actions] = noise_scales.dof_vel * noise_level * self.obs_scales.dof_vel
-        noise_vec[12+2*self.num_actions:12+3*self.num_actions] = 0. # previous actions
+        noise_vec[9:16] = 0. # commands
+        noise_vec[16:16+self.num_actions] = noise_scales.dof_pos * noise_level * self.obs_scales.dof_pos
+        noise_vec[16+self.num_actions:16+2*self.num_actions] = noise_scales.dof_vel * noise_level * self.obs_scales.dof_vel
+        noise_vec[16+2*self.num_actions:16+3*self.num_actions] = 0. # previous actions
 
         return noise_vec
 
@@ -429,6 +465,13 @@ class LeggedRobot(BaseTask):
         """ Initialize torch tensors which will contain simulation states and processed quantities
         """
         # get gym GPU state tensors
+        self.num_obs = 52  # 3 + 3 + 3 + 4 + 12 + 12 + 12 + 7
+        self.obs_buf = torch.zeros((self.num_envs, self.num_obs), device=self.device)
+        # Initialize buffers for sensors
+        self.sensor_positions = to_torch(self.cfg.sensors.sensor_position, device=self.device).repeat(self.num_envs, 1)
+        self.sensor_orientations = to_torch(self.cfg.sensors.sensor_orientations, device=self.device)
+        self.sensor_readings = torch.zeros((self.num_envs, len(self.sensor_orientations)), device=self.device)
+
         actor_root_state = self.gym.acquire_actor_root_state_tensor(self.sim)
         dof_state_tensor = self.gym.acquire_dof_state_tensor(self.sim)
         net_contact_forces = self.gym.acquire_net_contact_force_tensor(self.sim)
@@ -737,3 +780,79 @@ class LeggedRobot(BaseTask):
     def _reward_feet_contact_forces(self):
         # penalize high contact forces
         return torch.sum((torch.norm(self.contact_forces[:, self.feet_indices, :], dim=-1) -  self.cfg.rewards.max_contact_force).clip(min=0.), dim=1)
+
+    def _reward_tracking_ang_vel2(self):
+        # Tracking of angular velocity commands (yaw)
+        ang_vel_error = (self.commands[:, 2] * self.base_ang_vel[:, 2])
+        # ang_vel_error[ang_vel_error < 0] = 0
+        # ang_vel_error[self.commands[:, 2]**2>0.1**2] = 0
+        # stability_term = 0.1 * self.base_ang_vel[:, 2]/self.cfg.rewards.tracking_sigma
+        return ang_vel_error / (
+                    ang_vel_error * ang_vel_error + 0.01) / self.cfg.rewards.tracking_sigma - 0.05 * self.base_ang_vel[
+                                                                                                     :, 2] ** 2
+    def _reward_fast_rotation(self):
+        """
+        Reward for fast rotations based on the z-axis angular velocity of the base.
+        """
+        # Reward is proportional to the absolute value of the z-axis angular velocity
+        return torch.abs(self.base_ang_vel[:, 2])
+
+    def _reward_base_height_tracking(self):
+        """Reward for tracking the base height command."""
+        height_error = torch.abs(self.commands[:, 3] - self.base_pos[:, 2])  # Compare command to current height
+        return torch.exp(-height_error / 0.1)  # Adjust scaling factor (e.g., 0.1) as needed
+
+    def _reward_base_pitch_tracking(self):
+        """Reward for tracking the base pitch angle command."""
+        pitch_error = torch.abs(self.commands[:, 4] - self.rpy[:, 1])  # Compare command to current pitch
+        return torch.exp(-pitch_error / 0.1)  # Adjust scaling factor (e.g., 0.1) as needed
+
+    def _reward_base_roll_tracking(self):
+        """
+        Reward for fast rotations based on the z-axis angular velocity of the base.
+        """
+        # Reward is proportional to the absolute value of the z-axis angular velocity
+        roll_error = torch.abs(self.commands[:, 5] - self.rpy[:, 0])
+        return torch.exp(-roll_error / 0.1)
+
+    def _reward_tracking_lin_vel_stability(self):
+        # Tracking of linear velocity commands (xy axes)
+        lin_vel_error = torch.sum(torch.square(self.commands[:, :2] - self.base_lin_vel[:, :2]), dim=1)
+
+        # Standard tracking reward
+        reward = torch.exp(-lin_vel_error / self.cfg.rewards.tracking_sigma)
+
+        # Apply negative reward if target velocity is zero but actual velocity is non-zero
+        zero_target_mask = torch.all(self.commands[:, :2] == 0, dim=1)  # Check if both target velocities are zero
+        actual_velocity_non_zero = torch.any(self.base_lin_vel[:, :2] != 0,
+                                             dim=1)  # Check if any actual velocity component is non-zero
+        penalty_mask = zero_target_mask & actual_velocity_non_zero  # Apply penalty only when both conditions are met
+
+        negative_reward = -1.0  # Define the penalty value
+        reward += penalty_mask.float() * negative_reward  # Add negative reward for violating condition
+
+        return reward
+
+    def _reward_foot_in_the_air(self):
+        """
+        Penalize feet floating in the air unnecessarily based on the current motion command.
+        This reward encourages stable and efficient foot-ground contact patterns.
+
+        Returns:
+            torch.Tensor: Reward values penalizing feet in the air.
+        """
+        # Calculate whether each foot is in contact
+        contact = self.contact_forces[:, self.feet_indices, 2] > 1.0  # Z-axis force threshold for contact
+
+        # Identify commands requiring consistent foot-ground contact
+        is_moving = torch.norm(self.commands[:, :3], dim=1) > 0.1  # Commands with significant linear/angular velocity
+        floating_feet = ~contact  # Feet not in contact
+
+        # Penalize floating feet for moving commands
+        penalization = floating_feet.sum(dim=1) * is_moving.float()
+
+        # Scale the penalty to fit within the reward framework
+        penalty = -1.0 * penalization  # Adjust scale factor as needed
+
+        # Add this penalty to the reward buffer
+        return penalty
