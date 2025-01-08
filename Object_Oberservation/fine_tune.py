@@ -3,11 +3,11 @@ from ultralytics import YOLO
 
 def main():
     # Pfade zu den Trainings- und Validierungsdaten (im YOLO-Format)
-    dataset_path = "Data/Plant"
+    dataset_path = "Object_Observation/Data/Plant"
     data_yaml = os.path.join(dataset_path, "data.yaml")  # data.yaml definiert die Klassen und Datenpfade
 
     # Wähle das vortrainierte YOLO11-Modell
-    model_name = "yolo11n.pt"  # Alternativen: "yolo11s.pt", "yolo11m.pt", etc.
+    model_name = "Object_Observation/yolo11n.pt"  # Alternativen: "yolo11s.pt", "yolo11m.pt", etc.
 
     # Modell laden
     model = YOLO(model_name)

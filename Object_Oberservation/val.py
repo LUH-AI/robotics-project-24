@@ -8,8 +8,8 @@ from ultralytics import YOLO
 
 # Konfiguration
 device = "cuda" if torch.cuda.is_available() else "cpu"
-model_path = "runs/detect/train/weights/best.pt"  # Pfad zum trainierten YOLO11-Modell
-dataset_path = "Data/Test/Test_plant.v1i.yolov11/test"  # Pfad zum Test-Datensatz
+model_path = "Object_Observation/runs/detect/train/weights/best.pt"  # Pfad zum trainierten YOLO11-Modell
+dataset_path = "Object_Observation/Data/Test/Test_plant.v1i.yolov11/test"  # Pfad zum Test-Datensatz
 confidence_threshold = 0.5
 iou_threshold = 0.5
 
