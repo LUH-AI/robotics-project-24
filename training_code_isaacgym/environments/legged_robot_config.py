@@ -3,7 +3,7 @@ from legged_gym.envs.base.base_config import BaseConfig
 class LeggedRobotCfg(BaseConfig):
     class env:
         num_envs = 32
-        num_observations = 48
+        num_observations = 52
         num_privileged_obs = None # if not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned otherwise 
         num_actions = 12
         env_spacing = 3.  # not used with heightfields/trimeshes 
@@ -43,10 +43,14 @@ class LeggedRobotCfg(BaseConfig):
         resampling_time = 10. # time before command are changed[s]
         heading_command = True # if true: compute ang vel command from heading error
         class ranges:
-            lin_vel_x = [-1.0, 1.0] # min max [m/s]
-            lin_vel_y = [-1.0, 1.0]   # min max [m/s]
-            ang_vel_yaw = [-1, 1]    # min max [rad/s]
-            heading = [-3.14, 3.14]
+            class ranges:
+                lin_vel_x = [-2.5, 2.5]  # min max [m/s]
+                lin_vel_y = [-1.75, 1.75]  # min max [m/s]
+                ang_vel_yaw = [-1.5, 1.5]  # min max [rad/s]
+                base_height = [0.35, 2.]  # Min and max height
+                base_pitch = [-0.3, 0.4]  # Min and max pitch angle in radians (-15 to 15 degrees)
+                base_role = [-0.4, 0.4]
+                # heading = [-3.14, 3.14]
 
     class init_state:
         pos = [0.0, 0.0, 1.] # x,y,z [m]
@@ -101,20 +105,26 @@ class LeggedRobotCfg(BaseConfig):
     class rewards:
         class scales:
             termination = -0.0
-            tracking_lin_vel = 1.0
-            tracking_ang_vel = 0.5
-            lin_vel_z = -2.0
+            tracking_lin_vel = 4.
+            tracking_ang_vel = 2.
+            tracking_ang_vel2 = 0.05
+            lin_vel_z = -0.75
             ang_vel_xy = -0.05
             orientation = -0.
-            torques = -0.00001
+            torques = -0.0001
             dof_vel = -0.
             dof_acc = -2.5e-7
-            base_height = -0. 
-            feet_air_time =  1.0
+            base_height = -0.
+            feet_air_time = 0.5
             collision = -1.
-            feet_stumble = -0.0 
-            action_rate = -0.01
+            feet_stumble = -0.0
+            action_rate = -0.015
             stand_still = -0.
+            base_height_tracking = 1.5
+            base_pitch_tracking = 1.5
+            base_roll_tracking = 2.5
+            tracking_lin_vel_stability = 2.0
+            foot_in_the_air = 0.
 
         only_positive_rewards = True # if true negative total rewards are clipped at zero (avoids early termination problems)
         tracking_sigma = 0.25 # tracking reward = exp(-error^2/sigma)
