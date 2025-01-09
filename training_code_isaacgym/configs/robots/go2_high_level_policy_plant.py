@@ -5,7 +5,7 @@ from ..scenes import BaseSceneCfg
 
 # this is the GO2RoughCfg copied from unitree_rl_gym repo (do not change, create a new file)
 class GO2HighLevelPlantPolicyCfg(LeggedRobotCfg):
-    name = "go2_default"
+    name = "go2_default-high-level-policy_plant"
 
     class init_state(LeggedRobotCfg.init_state):
         pos = [0.0, 0.0, 0.42]  # x,y,z [m]
