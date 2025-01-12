@@ -16,11 +16,12 @@ from .base_task import BaseTask
 from legged_gym.utils.math import wrap_to_pi
 from legged_gym.utils.isaacgym_utils import get_euler_xyz as get_euler_xyz_in_tensor
 from legged_gym.utils.helpers import class_to_dict
-from environments.legged_robot_config import LeggedRobotCfg
-import cv2
+from .legged_robot_config import LeggedRobotCfg
+#import cv2
 
 class LeggedRobot(BaseTask):
     def __init__(self, cfg: LeggedRobotCfg, sim_params, physics_engine, sim_device, headless):
+        
         """ Parses the provided config file,
             calls create_sim() (which creates, simulation and environments),
             initilizes pytorch buffers used during training
@@ -39,7 +40,7 @@ class LeggedRobot(BaseTask):
         self.debug_viz = False
         self.init_done = False
         self._parse_cfg(self.cfg)
-        self._prepare_camera(self.cfg.camera.horizontal_fov, self.cfg.camera.width, self.cfg.camera.height, self.cfg.camera.enable_tensors)
+        #self._prepare_camera(self.cfg.camera.horizontal_fov, self.cfg.camera.width, self.cfg.camera.height, self.cfg.camera.enable_tensors)
         super().__init__(self.cfg, sim_params, physics_engine, sim_device, headless)
 
         if not self.headless:
@@ -195,11 +196,11 @@ class LeggedRobot(BaseTask):
                                     self.actions,
                                     ),dim=-1)
         
-        image = self.gym.get_camera_image(self.sim, self.envs[0], self.cameras[0], gymapi.IMAGE_DEPTH)
+        """ image = self.gym.get_camera_image(self.sim, self.envs[0], self.cameras[0], gymapi.IMAGE_DEPTH)
         print(type(image))
         cv2.imwrite("Test_robo_image.jpeg", image)
         print("Image Saved xD")
-        exit()
+        exit() """
         # add perceptive inputs if not blind
         # add noise if needed
         if self.add_noise:

@@ -1,7 +1,7 @@
 from legged_gym.envs.base.legged_robot_config import LeggedRobotCfg
 
 from ..scenes import BaseSceneCfg
-
+import os
 
 # this is the GO2RoughCfg copied from unitree_rl_gym repo (do not change, create a new file)
 class GO2HighLevelPlantPolicyCfg(LeggedRobotCfg):
@@ -11,13 +11,13 @@ class GO2HighLevelPlantPolicyCfg(LeggedRobotCfg):
         path = "./path/to/low_level_policy"  # [TODO: this is not properly set]
         num_observations = 48
         num_actions = 12
-
+        model_path = os.path.join(os.path.dirname(__file__), "../models/model.pt")
     # Overwrite env from LeggedrobotCfg
     class env:
         num_envs = 32
-        num_observations = 48  # [TODO: this is not properly set]
+        num_observations = 6  # [TODO: this is not properly set]
         num_privileged_obs = None # if not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned otherwise 
-        num_actions = 12  # [TODO: this is not properly set]
+        num_actions = 3  # [TODO: this is not properly set]
         env_spacing = 3.  # not used with heightfields/trimeshes 
         send_timeouts = True # send time out information to the algorithm
         episode_length_s = 20 # episode length in seconds

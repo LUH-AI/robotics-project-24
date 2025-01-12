@@ -132,11 +132,12 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         self, cfg: GO2DefaultCfg, sim_params, physics_engine, sim_device, headless
     ):
         super().__init__(cfg, sim_params, physics_engine, sim_device, headless)
+   
         # for language server purposes only
         self.cfg: GO2DefaultCfg = self.cfg
 
         # Load low-level policy
-        self.low_level_policy = load_low_level_policy(cfg)
+        self.low_level_policy = load_low_level_policy(cfg, sim_device)
         # use `self.low_level_policy.act(observations)` to get an action. See `ActorCritic` in rsl_rl/modules/actor_critic.py
 
     def _create_ground_plane(self):
@@ -197,41 +198,56 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
             )
             self.object_handles[env_idx].append(object_handle)
 
-    def compute_observations(self):
+
+    #computes high level observations
+    def compute_high_level_observations(self):
         """ Computes observations
         """
-        self.obs_buf = torch.cat((  self.base_lin_vel * self.obs_scales.lin_vel,
-                                    self.base_ang_vel  * self.obs_scales.ang_vel,
+        #change this
+        self.high_level_obs_buf = torch.cat((  self.base_lin_vel * self.obs_scales.lin_vel,
                                     self.projected_gravity,
-                                    self.commands[:, :3] * self.commands_scale,
-                                    (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
-                                    self.dof_vel * self.obs_scales.dof_vel,
-                                    self.actions
                                     ),dim=-1)
-        # All entries in torch.cat have dimensions, n_envs * n where you can determine n, but have to add it to n_obs in the configuration of the robot
-        # add perceptive inputs if not blind
-        # add noise if needed
-        if self.add_noise:
-            self.obs_buf += (2 * torch.rand_like(self.obs_buf) - 1) * self.noise_scale_vec
-
+        
+  
+    #dont rename, onPolicyRunner calls this
+    def get_observations(self):
+        print(f"get_observations Self.obs.shape {self.obs_buf.shape}")
+        return self.high_level_obs_buf
+    
     # add custom rewards... here (use your robot_cfg for control)
 
-    def step(self, actions):
+    def step(self, high_level_actions):
         """ Apply actions, simulate, call self.post_physics_step()
 
         Args:
             actions (torch.Tensor): Tensor of shape (num_envs, num_actions_per_env)
         """
-        raise NotImplementedError
         # Here we get high level actions and need to translate them to low level actions
-        modified_actions = actions
-        step_return = super().step(modified_actions)
-        return step_return
+        #actions are always low_level (dim=12) and high_level_actions are high level (dim=5)
+        self.high_level_actions = high_level_actions
+        actions = self.low_level_policy.act_inference(self.obs_buf)
+        
+        #obs buffer is low level, cannot rename because leggedrobot uses it
+        obs_buf, privileged_obs_buf, rew_buf, reset_buf, extras = super().step(actions)
+        self.compute_high_level_observations()
+        return self.high_level_obs_buf, privileged_obs_buf, rew_buf, reset_buf, extras
 
-    def get_observations(self):
-        raise NotImplementedError
-        # Here we get low level observations and need to transform them to high level observations
-        # This will probably also need customization of the configuration
-        observations = self.obs_buf
-        modified_observations = observations
-        return modified_observations
+
+    #this computes low level observations
+    #cannot be renamed, because leggedrobot has to call this
+    def compute_observations(self):
+        """ Computes observations
+        """
+       
+        # Set the first command (index 0) for each robot to 0.5
+        #set fixed command to let the robot rotate
+        self.high_level_actions[:, 2] = 0.5
+        self.obs_buf = torch.cat((  self.base_lin_vel * self.obs_scales.lin_vel,
+                                    self.base_ang_vel  * self.obs_scales.ang_vel,
+                                    self.projected_gravity,
+                                    self.high_level_actions,
+                                    (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
+                                    self.dof_vel * self.obs_scales.dof_vel,
+                                    self.actions
+                                    ),dim=-1)
+        
