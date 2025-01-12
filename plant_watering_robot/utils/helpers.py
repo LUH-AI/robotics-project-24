@@ -5,8 +5,37 @@ import numpy as np
 import random
 from isaacgym import gymapi
 from isaacgym import gymutil
-
+import torch
+from rsl_rl.modules import ActorCritic
 from legged_gym import LEGGED_GYM_ROOT_DIR, LEGGED_GYM_ENVS_DIR
+from ..envs.base.legged_robot_config import LeggedRobotCfg
+
+def load_low_level_policy(cfg: LeggedRobotCfg, sim_device):
+    module = ActorCritic(
+        num_actor_obs=cfg.env.num_observations,
+        num_critic_obs=cfg.env.num_observations,
+        num_actions=cfg.env.num_actions,
+        actor_hidden_dims=[512, 256, 128], 
+        critic_hidden_dims=[512, 256, 128],  
+    )
+    module = module.to(sim_device)
+    script_dir = os.path.dirname(__file__)
+    model_path = os.path.join(script_dir, "..", "policies", "model.pt")
+    checkpoint = torch.load(model_path)
+
+    model_state_dict = checkpoint.get('model_state_dict')
+    if model_state_dict is None:
+        raise ValueError("The checkpoint does not contain a 'model_state_dict' key.")
+
+    try:
+        module.load_state_dict(model_state_dict)
+    except RuntimeError as e:
+        print("\nError while loading state dictionary:")
+        print(e)
+        return None
+
+    return module
+
 
 def class_to_dict(obj) -> dict:
     if not  hasattr(obj,"__dict__"):

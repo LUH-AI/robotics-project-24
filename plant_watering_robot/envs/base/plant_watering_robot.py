@@ -4,7 +4,6 @@ from warnings import WarningMessage
 import numpy as np
 import os
 import io
-
 from isaacgym.torch_utils import *
 from isaacgym import gymtorch, gymapi, gymutil
 
@@ -19,7 +18,7 @@ from legged_gym.utils.isaacgym_utils import get_euler_xyz as get_euler_xyz_in_te
 from legged_gym.utils.helpers import class_to_dict
 from .legged_robot_config import LeggedRobotCfg
 from .plant_watering_robot_config import PlantWateringRobotCfg
-
+from ...utils.helpers import load_low_level_policy
 class PlantWateringRobot(BaseTask):
     def __init__(self, low_level_cfg: LeggedRobotCfg, cfg: PlantWateringRobotCfg, sim_params, physics_engine, sim_device, headless):
         """ Parses the provided config file,
@@ -54,7 +53,7 @@ class PlantWateringRobot(BaseTask):
         if not os.path.isfile(policy_path):
             raise FileNotFoundError(f"Policy file {policy_path} does not exist.")
         file_bytes = read_file(policy_path)
-        self.low_level_policy = torch.jit.load(file_bytes).to(self.device).eval()
+        self.low_level_policy = load_low_level_policy(low_level_cfg, sim_device)
         self.low_level_obs_buf = torch.zeros(self.num_envs, 48, device=self.device, dtype=torch.float) 
         self._previous_low_level_actions = torch.zeros(self.num_envs, 12, device=self.device, dtype=torch.float) 
         
@@ -94,8 +93,8 @@ class PlantWateringRobot(BaseTask):
 
     def apply_low_level_actions(self):
         #self.obs has the command applied which is generated via high level policy in compute_low_level_observation
-        low_level_actions = self.low_level_policy(self.low_level_obs_buf)
-        self.torques = self._compute_torques(low_level_actions).view(self.torques.shape)
+        self.low_level_actions = self.low_level_policy.act_inference(self.low_level_obs_buf)
+        self.torques = self._compute_torques(self.low_level_actions).view(self.torques.shape)
         self._previous_low_level_actions = self.torques.clone()
         self.gym.set_dof_actuation_force_tensor(self.sim, gymtorch.unwrap_tensor(self.torques))
     
@@ -198,7 +197,11 @@ class PlantWateringRobot(BaseTask):
     def compute_low_level_observations(self):
         """ Computes observations
         """
-        
+       
+
+        # Set the first command (index 0) for each robot to 0.5
+        #set fixed command to let the robot rotate
+        self.actions[:, 2] = 0.5
         self.low_level_obs_buf = torch.cat((  self.base_lin_vel * self.obs_scales.lin_vel,
                                     self.base_ang_vel  * self.obs_scales.ang_vel,
                                     self.projected_gravity,

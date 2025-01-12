@@ -1,6 +1,12 @@
 from .base_config import BaseConfig
-
+import os
 class PlantWateringRobotCfg(BaseConfig):
+    
+    class low_level_policy:
+        model_path = os.path.abspath(os.path.join(os.getcwd(), "..", "..", "policies", "model.pt"))
+        num_observations = 48
+        num_actions = 12
+        
     class env:
         num_envs = 4096
         num_observations = 6
@@ -10,7 +16,6 @@ class PlantWateringRobotCfg(BaseConfig):
         send_timeouts = True # send time out information to the algorithm
         episode_length_s = 20 # episode length in seconds
         test = False
-
     class terrain:
         mesh_type = 'plane' # "heightfield" # none, plane, heightfield or trimesh
         horizontal_scale = 0.1 # [m]
