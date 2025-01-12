@@ -1,4 +1,5 @@
 from typing import Any, Callable, List
+import warnings
 
 import torch
 import cv2
@@ -15,6 +16,8 @@ from ..configs.robots import GO2DefaultCfg
 from ..configs.scenes import BaseSceneCfg
 from ..configs.algorithms import PPODefaultCfg
 from .compatible_legged_robot import CompatibleLeggedRobot
+from . import task_utils
+
 
 GO2DefaultCfg()
 # do CONFIGURABLE adaptations in this file
@@ -25,7 +28,10 @@ import numpy as np
 
 # register all tasks derived from CustomLeggedRobot
 def register_task(
-    robot_cfg: GO2DefaultCfg, scene_cfg: BaseSceneCfg, algorithm_cfg: PPODefaultCfg, robot_class: Callable
+    robot_cfg: GO2DefaultCfg,
+    scene_cfg: BaseSceneCfg,
+    algorithm_cfg: PPODefaultCfg,
+    robot_class: Callable,
 ) -> str:
     """Register task based on robot, scene and algorithm configurations
     All configs need a name attribute.
@@ -42,7 +48,7 @@ def register_task(
 
     # add scene_cfg to robot_cfg for compatibility with task_registry
     robot_cfg.scene = scene_cfg
-    robot_cfg.env.env_spacing = scene_cfg.size
+    robot_cfg.env.env_spacing = scene_cfg.size + scene_cfg.spacing
     algorithm_cfg.runner.experiment_name = name
     task_registry.register(name, robot_class, robot_cfg, algorithm_cfg)
     return name
@@ -56,63 +62,12 @@ class CustomLeggedRobot(CompatibleLeggedRobot):
         # for language server purposes only
         self.cfg: GO2DefaultCfg = self.cfg
 
-    def _create_ground_plane(self):
-        """Adds a ground plane to the simulation, sets friction and restitution based on the cfg.
-        Additionally, sets segmentation_id to 1 (index of ObjectType="ground")
+        self.absolute_plant_locations: torch.Tensor
         """
-        plane_params = gymapi.PlaneParams()
-        plane_params.normal = gymapi.Vec3(0.0, 0.0, 1.0)
-        plane_params.static_friction = self.cfg.terrain.static_friction
-        plane_params.dynamic_friction = self.cfg.terrain.dynamic_friction
-        plane_params.restitution = self.cfg.terrain.restitution
-        plane_params.segmentation_id = 1  # added for compatibility
-        self.gym.add_ground(self.sim, plane_params)
-
-    def _place_static_objects(self, env_idx: int, env_handle: Any):
-        """Places static objects like walls into the provided environment
-        It is called in the environment creation loop in super()._create_envs()
-
-        Args:
-            env_idx (int): Index of environment
-            env_handle (Any): Environment handle
+        Absolute locations of plants in each environment
+        shape: (|environments| x |plants_per_env| x 3)
+        (Attribute is instantiated in self._place_static_objects())
         """
-        self.object_handles.append([])
-        self.num_static_objects = len(self.cfg.scene.static_objects)
-        for object_idx, static_obj in enumerate(self.cfg.scene.static_objects):
-            if len(self.object_assets) - 1 > object_idx:
-                obj_asset = self.object_assets[object_idx]
-            else:
-                obj_asset = self.gym.load_asset(
-                    self.sim,
-                    str(static_obj.asset_root),
-                    str(static_obj.asset_file),
-                    static_obj.asset_options,
-                )
-                self.object_assets.append(obj_asset)
-
-            start_pose = gymapi.Transform()
-            location_offset = self.env_origins[env_idx].clone()
-            init_location = static_obj.init_location.to(self.device)
-            random_loc_offset = (
-                static_obj.max_random_loc_offset
-                * (torch.rand(static_obj.max_random_loc_offset.shape) - 0.5)
-                * 2
-            ).to(self.device)
-            start_pose.p = gymapi.Vec3(
-                *(init_location + location_offset + random_loc_offset)
-            )
-
-            # env_idx sets collision group, -1 default for collision_filter
-            object_handle = self.gym.create_actor(
-                env_handle,
-                obj_asset,
-                start_pose,
-                static_obj.name,
-                env_idx,
-                -1,
-                static_obj.segmentation_id,
-            )
-            self.object_handles[env_idx].append(object_handle)
 
     def compute_observations(self):
         """Computes observations"""
@@ -136,6 +91,7 @@ class CustomLeggedRobot(CompatibleLeggedRobot):
             self.obs_buf += (
                 2 * torch.rand_like(self.obs_buf) - 1
             ) * self.noise_scale_vec
+
     # add custom rewards... here (use your robot_cfg for control)
     
 
@@ -148,6 +104,12 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         # for language server purposes only
         self.cfg: GO2DefaultCfg = self.cfg
 
+        self.absolute_plant_locations: torch.Tensor
+        """
+        Absolute locations of plants in each environment
+        shape: (|environments| x |plants_per_env| x 3)
+        (Attribute is instantiated in self._place_static_objects())
+        """
     def _prepare_camera(self, camera):
         print("Preparing")
         self.camera_props = gymapi.CameraProperties()
@@ -157,90 +119,91 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         self.camera_props.enable_tensors = camera.enable_tensors
         self.camera_props.use_collision_geometry = True
 
-    def _create_ground_plane(self):
-        """Adds a ground plane to the simulation, sets friction and restitution based on the cfg.
-        Additionally, sets segmentation_id to 1 (index of ObjectType="ground")
-        """
-        plane_params = gymapi.PlaneParams()
-        plane_params.normal = gymapi.Vec3(0.0, 0.0, 1.0)
-        plane_params.static_friction = self.cfg.terrain.static_friction
-        plane_params.dynamic_friction = self.cfg.terrain.dynamic_friction
-        plane_params.restitution = self.cfg.terrain.restitution
-        plane_params.segmentation_id = 1  # added for compatibility
-        self.gym.add_ground(self.sim, plane_params)
-
-    def _place_static_objects(self, env_idx: int, env_handle: Any):
-        """Places static objects like walls into the provided environment
-        It is called in the environment creation loop in super()._create_envs()
-
-        Args:
-            env_idx (int): Index of environment
-            env_handle (Any): Environment handle
-        """
-        self.object_handles.append([])
-        self.num_static_objects = len(self.cfg.scene.static_objects)
-        for object_idx, static_obj in enumerate(self.cfg.scene.static_objects):
-            if len(self.object_assets) - 1 > object_idx:
-                obj_asset = self.object_assets[object_idx]
-            else:
-                obj_asset = self.gym.load_asset(
-                    self.sim,
-                    str(static_obj.asset_root),
-                    str(static_obj.asset_file),
-                    static_obj.asset_options,
-                )
-                self.object_assets.append(obj_asset)
-
-            start_pose = gymapi.Transform()
-            location_offset = self.env_origins[env_idx].clone()
-            init_location = static_obj.init_location.to(self.device)
-            random_loc_offset = (
-                static_obj.max_random_loc_offset
-                * (torch.rand(static_obj.max_random_loc_offset.shape) - 0.5)
-                * 2
-            ).to(self.device)
-            start_pose.p = gymapi.Vec3(
-                *(init_location + location_offset + random_loc_offset)
-            )
-
-            # env_idx sets collision group, -1 default for collision_filter
-            object_handle = self.gym.create_actor(
-                env_handle,
-                obj_asset,
-                start_pose,
-                static_obj.name,
-                env_idx,
-                -1,
-                static_obj.segmentation_id,
-            )
-            self.object_handles[env_idx].append(object_handle)
-
     def compute_observations(self):
-        """ Computes observations
-        """
-        self.obs_buf = torch.cat((  self.base_lin_vel * self.obs_scales.lin_vel,
-                                    self.base_ang_vel  * self.obs_scales.ang_vel,
-                                    self.projected_gravity,
-                                    self.commands[:, :3] * self.commands_scale,
-                                    (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
-                                    self.dof_vel * self.obs_scales.dof_vel,
-                                    self.actions
-                                    ),dim=-1)
-        # All entries in torch.cat have dimensions, n_envs * n where you can determine n, but have to add it to n_obs in the configuration of the robot
-        # add perceptive inputs if not blind
-        # add noise if needed
+        """Computes observations, including distances and angles to detected plants."""
+        # Call object detection method
+        detected_objects = self._detect_objects()
+        
+        # Collect plant-related features directly from detected objects
+        plants = [plant for obj in detected_objects for plant in obj["plants"]]
+        env_indices = [obj["env_idx"] for obj in detected_objects for _ in obj["plants"]]
+    
+        plant_distances = torch.tensor([plant["distance"] for plant in plants], device=self.device).unsqueeze(1)
+        plant_angles = torch.tensor([plant["angle"] for plant in plants], device=self.device).unsqueeze(1)
+        env_indices_tensor = torch.tensor(env_indices, device=self.device).unsqueeze(1)
+    
+        # Base observation components combined with plant-related features
+        self.obs_buf = torch.cat(
+            (
+                self.base_lin_vel * self.obs_scales.lin_vel,
+                self.base_ang_vel * self.obs_scales.ang_vel,
+                self.projected_gravity,
+                self.commands[:, :3] * self.commands_scale,
+                (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
+                self.dof_vel * self.obs_scales.dof_vel,
+                self.actions,
+                env_indices_tensor,
+                plant_distances,
+                plant_angles,
+            ),
+            dim=-1,
+        )
+    
+        # Add noise if required
         if self.add_noise:
-            self.obs_buf += (2 * torch.rand_like(self.obs_buf) - 1) * self.noise_scale_vec
+            self.obs_buf += (
+                2 * torch.rand_like(self.obs_buf) - 1
+            ) * self.noise_scale_vec
 
-    # add custom rewards... here (use your robot_cfg for control)
+    def _detect_objects(self):
+        """Detects objects in the environment and classifies them into obstacles and plants/targets.
+        Additionally, computes angle and distance from the robot to each detected object.
+        Only objects within the robot's field of view (120 degrees in both axes) are detected.
+
+        Returns:
+            dict: A dictionary containing detected objects for each environment, their classification, distances, and angles.
+        """
+        detected_objects = []
+        fov_angle = torch.deg2rad(torch.tensor(120.0 / 2))  # Half of 120 degrees in radians
+    
+        for env_idx in range(self.absolute_plant_locations.shape[0]):
+            robot_position = self.base_pos[env_idx]  # Get robot position for the current environment
+            robot_orientation = self.rpy[env_idx, 2]  # Get robot yaw (orientation) for the current environment
+    
+            obstacles = []
+            plants = []
+
+            for plant_location in self.absolute_plant_locations[env_idx]:
+                # Compute distance from robot to plant
+                distance = torch.norm(plant_location - robot_position)
+    
+                # Compute angle from robot to plant
+                relative_position = plant_location - robot_position
+                angle = torch.atan2(relative_position[1], relative_position[0]) - robot_orientation
+                angle = torch.remainder(angle + torch.pi, 2 * torch.pi) - torch.pi  # Normalize angle to [-pi, pi]
+    
+                # Check if the plant is within the robot's field of view (FOV)
+                if torch.abs(angle) <= fov_angle:
+                    plants.append({
+                        "location": plant_location,
+                        "distance": distance,
+                        "angle": angle
+                    })
+
+            detected_objects.append({
+                "env_idx": env_idx,
+                "obstacles": obstacles,  # No obstacles handled yet, placeholder for future extension
+                "plants": plants
+            })
+
+        return detected_objects
 
     def step(self, actions):
-        """ Apply actions, simulate, call self.post_physics_step()
+        """Apply actions, simulate, call self.post_physics_step()
 
         Args:
             actions (torch.Tensor): Tensor of shape (num_envs, num_actions_per_env)
         """
-        raise NotImplementedError
         # Here we get high level actions and need to translate them to low level actions
         modified_actions = actions
         step_return = super().step(modified_actions)
