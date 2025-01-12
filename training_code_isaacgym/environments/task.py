@@ -1,8 +1,14 @@
-from typing import Any, Callable
+from typing import Any, Callable, List
 import warnings
 
 import torch
+import cv2
+import os
+import sys
+
 from isaacgym import gymapi
+from isaacgym.torch_utils import *
+from legged_gym import LEGGED_GYM_ROOT_DIR
 
 from legged_gym.utils.task_registry import task_registry
 
@@ -15,6 +21,9 @@ from . import task_utils
 
 GO2DefaultCfg()
 # do CONFIGURABLE adaptations in this file
+
+import numpy as np
+
 
 
 # register all tasks derived from CustomLeggedRobot
@@ -77,18 +86,20 @@ class CustomLeggedRobot(CompatibleLeggedRobot):
         # All entries in torch.cat have dimensions, n_envs * n where you can determine n, but have to add it to n_obs in the configuration of the robot
         # add perceptive inputs if not blind
         # add noise if needed
+
         if self.add_noise:
             self.obs_buf += (
                 2 * torch.rand_like(self.obs_buf) - 1
             ) * self.noise_scale_vec
 
     # add custom rewards... here (use your robot_cfg for control)
-
+    
 
 class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
     def __init__(
         self, cfg: GO2DefaultCfg, sim_params, physics_engine, sim_device, headless
     ):
+        self._prepare_camera(cfg.camera)
         super().__init__(cfg, sim_params, physics_engine, sim_device, headless)
         # for language server purposes only
         self.cfg: GO2DefaultCfg = self.cfg
@@ -99,6 +110,14 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         shape: (|environments| x |plants_per_env| x 3)
         (Attribute is instantiated in self._place_static_objects())
         """
+    def _prepare_camera(self, camera):
+        print("Preparing")
+        self.camera_props = gymapi.CameraProperties()
+        self.camera_props.horizontal_fov = camera.horizontal_fov
+        self.camera_props.width = camera.width
+        self.camera_props.height = camera.height
+        self.camera_props.enable_tensors = camera.enable_tensors
+        self.camera_props.use_collision_geometry = True
 
     def compute_observations(self):
         """Computes observations, including distances and angles to detected plants."""
@@ -191,9 +210,44 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         return step_return
 
     def get_observations(self):
+        depth_arrays = torch.tensor([self.gym.get_camera_image(
+            self.sim, self.envs[i], self.cameras[i], gymapi.IMAGE_DEPTH
+        ) for i in range(len(self.cameras))]) # Has shape (num_envs, 12) TODO: Check if extra dimension somehow sneaked in
+        #TODO: Add Distance measure to observation / preprocess it to a good range. Currently: -inf = infinitely far away and -0.1 is 10cm away
         raise NotImplementedError
         # Here we get low level observations and need to transform them to high level observations
         # This will probably also need customization of the configuration
         observations = self.obs_buf
         modified_observations = observations
         return modified_observations
+
+    def _create_envs(self):
+        """Creates environments:
+        1. loads the robot URDF/MJCF asset,
+        2. For each environment
+           2.1 creates the environment,
+           2.2 calls DOF and Rigid shape properties callbacks,
+           2.3 create actor with these properties and add them to the env
+        3. Store indices of different bodies of the robot
+        """
+        super()._create_envs()
+        # ADD Camera Functionality
+        self.cameras = []
+        for env_handle, actor_handle in zip(self.envs, self.actor_handles):
+            camera_handle = self.gym.create_camera_sensor(env_handle, self.camera_props)
+            local_transform = gymapi.Transform()
+            local_transform.p = self.cfg.camera.vec_from_body_center
+            local_transform.r = self.cfg.camera.rot_of_camera
+            self.gym.attach_camera_to_body(
+                camera_handle,
+                env_handle,
+                actor_handle,
+                local_transform,
+                gymapi.FOLLOW_TRANSFORM,
+            )
+            self.cameras.append(camera_handle)
+    
+    def render(self, sync_frame_time=True):
+        super().render(sync_frame_time)
+        # This renders all cameras each simulation step
+        self.gym.render_all_camera_sensors(self.sim)
