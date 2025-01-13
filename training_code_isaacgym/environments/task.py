@@ -207,6 +207,7 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         self.high_level_obs_buf = torch.cat((  self.base_lin_vel * self.obs_scales.lin_vel,
                                     self.projected_gravity,
                                     ),dim=-1)
+        print(f"Computed high level observations: {self.high_level_obs_buf.shape}")
         
   
     #dont rename, onPolicyRunner calls this
@@ -224,6 +225,7 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         """
         # Here we get high level actions and need to translate them to low level actions
         #actions are always low_level (dim=12) and high_level_actions are high level (dim=5)
+        print(f"HighLevelPlant.step(actions: {high_level_actions.shape})")
         self.high_level_actions = high_level_actions
         actions = self.low_level_policy.act_inference(self.obs_buf)
         
@@ -234,14 +236,15 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
 
 
     #this computes low level observations
-    #cannot be renamed, because leggedrobot has to call this
+    #cannot be renamed, because leggedrobot calls this
     def compute_observations(self):
         """ Computes observations
         """
        
         # Set the first command (index 0) for each robot to 0.5
         #set fixed command to let the robot rotate
-        self.high_level_actions[:, 2] = 0.5
+        print(f"Self.high_level_actions: {self.high_level_actions.shape}")
+        self.high_level_actions = torch.tensor([0, 0, 0.2], dtype=torch.float).repeat(32, 1).to(self.device)
         self.obs_buf = torch.cat((  self.base_lin_vel * self.obs_scales.lin_vel,
                                     self.base_ang_vel  * self.obs_scales.ang_vel,
                                     self.projected_gravity,
@@ -250,4 +253,6 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
                                     self.dof_vel * self.obs_scales.dof_vel,
                                     self.actions
                                     ),dim=-1)
+        print(f"Computed low level observations: {self.obs_buf.shape}")
+        #print(self.obs_buf[0])
         
