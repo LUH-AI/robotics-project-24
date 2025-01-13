@@ -16,7 +16,7 @@ from .base_task import BaseTask
 from legged_gym.utils.math import wrap_to_pi
 from legged_gym.utils.isaacgym_utils import get_euler_xyz as get_euler_xyz_in_tensor
 from legged_gym.utils.helpers import class_to_dict
-from environments.legged_robot_config import LeggedRobotCfg
+from .legged_robot_config import LeggedRobotCfg
 import cv2
 
 class LeggedRobot(BaseTask):

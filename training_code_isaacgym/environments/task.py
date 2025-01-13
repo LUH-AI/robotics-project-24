@@ -47,7 +47,7 @@ class CustomLeggedRobot(CompatibleLeggedRobot):
         super().__init__(cfg, sim_params, physics_engine, sim_device, headless)
         # for language server purposes only
         self.cfg: GO2DefaultCfg = self.cfg
-        self.low_level_policy = LowLevelModule(num_low_lvl_actions=self.env.num_actions)
+        self.low_level_policy = LowLevelModule(device=self.device)
 
     def _create_ground_plane(self):
         """Adds a ground plane to the simulation, sets friction and restitution based on the cfg.
