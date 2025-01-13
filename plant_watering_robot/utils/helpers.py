@@ -11,6 +11,7 @@ from legged_gym import LEGGED_GYM_ROOT_DIR, LEGGED_GYM_ENVS_DIR
 from ..envs.base.legged_robot_config import LeggedRobotCfg
 
 def load_low_level_policy(cfg: LeggedRobotCfg, sim_device):
+  
     module = ActorCritic(
         num_actor_obs=cfg.env.num_observations,
         num_critic_obs=cfg.env.num_observations,

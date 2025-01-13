@@ -12,7 +12,7 @@ from torch import Tensor
 from typing import Tuple, Dict
 
 from legged_gym import LEGGED_GYM_ROOT_DIR
-from legged_gym.envs.base.base_task import BaseTask
+from .base_task import BaseTask
 from legged_gym.utils.math import wrap_to_pi
 from legged_gym.utils.isaacgym_utils import get_euler_xyz as get_euler_xyz_in_tensor
 from legged_gym.utils.helpers import class_to_dict
@@ -48,13 +48,9 @@ class PlantWateringRobot(BaseTask):
         self._prepare_reward_function()
         self.init_done = True
         
-        policy_path = os.path.join(os.path.dirname(__file__), '..', '..','policies', 'low_level_policy.pt')
-
-        if not os.path.isfile(policy_path):
-            raise FileNotFoundError(f"Policy file {policy_path} does not exist.")
-        file_bytes = read_file(policy_path)
+ 
         self.low_level_policy = load_low_level_policy(low_level_cfg, sim_device)
-        self.low_level_obs_buf = torch.zeros(self.num_envs, 48, device=self.device, dtype=torch.float) 
+        self.low_level_obs_buf = torch.zeros(self.num_envs, self.low_level_cfg.env.num_observations, device=self.device, dtype=torch.float) 
         self._previous_low_level_actions = torch.zeros(self.num_envs, 12, device=self.device, dtype=torch.float) 
         
     def step(self, actions):

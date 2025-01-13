@@ -4,7 +4,7 @@ class PlantWateringRobotCfg(BaseConfig):
     
     class low_level_policy:
         model_path = os.path.abspath(os.path.join(os.getcwd(), "..", "..", "policies", "model.pt"))
-        num_observations = 48
+        num_observations = 52
         num_actions = 12
         
     class env:

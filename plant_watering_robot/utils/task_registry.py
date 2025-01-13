@@ -10,9 +10,9 @@ from rsl_rl.runners import OnPolicyRunner
 
 from legged_gym import LEGGED_GYM_ROOT_DIR, LEGGED_GYM_ENVS_DIR
 from .helpers import get_args, update_cfg_from_args, class_to_dict, get_load_path, set_seed, parse_sim_params
-from legged_gym.envs.base.legged_robot_config import LeggedRobotCfg, LeggedRobotCfgPPO
-from legged_gym.envs.base.plant_watering_robot_config import PlantWateringRobotCfg
-from legged_gym.envs.base.plant_watering_robot_config import PlantWateringRobotCfgPPO
+from ..envs.base.legged_robot_config import LeggedRobotCfg, LeggedRobotCfgPPO
+from ..envs.base.plant_watering_robot_config import PlantWateringRobotCfg
+from ..envs.base.plant_watering_robot_config import PlantWateringRobotCfgPPO
 class TaskRegistry():
     def __init__(self):
         self.task_classes = {}

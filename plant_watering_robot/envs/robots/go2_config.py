@@ -1,4 +1,4 @@
-from legged_gym.envs.base.legged_robot_config import LeggedRobotCfg, LeggedRobotCfgPPO
+from ..base.legged_robot_config import LeggedRobotCfg, LeggedRobotCfgPPO
 
 class GO2RoughCfg( LeggedRobotCfg ):
     class init_state( LeggedRobotCfg.init_state ):
