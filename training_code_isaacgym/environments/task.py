@@ -47,7 +47,6 @@ class CustomLeggedRobot(CompatibleLeggedRobot):
         super().__init__(cfg, sim_params, physics_engine, sim_device, headless)
         # for language server purposes only
         self.cfg: GO2DefaultCfg = self.cfg
-        self.low_level_policy = LowLevelModule(device=self.device)
 
     def _create_ground_plane(self):
         """Adds a ground plane to the simulation, sets friction and restitution based on the cfg.
@@ -134,6 +133,9 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         super().__init__(cfg, sim_params, physics_engine, sim_device, headless)
         # for language server purposes only
         self.cfg: GO2DefaultCfg = self.cfg
+        self.low_level_policy = LowLevelModule(device=self.device)
+        self.add_noise = False
+        self.cfg.domain_rand.push_robots = False
 
     def _create_ground_plane(self):
         """Adds a ground plane to the simulation, sets friction and restitution based on the cfg.
@@ -224,7 +226,7 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         # just for test purposes:
         # overwrites the current high_level_action choice of the high_level_policy with a constant action
         high_level_actions = actions
-        high_level_actions = torch.tensor([0, 0, 0.4], dtype=torch.float).repeat(10, 1).to(self.device)
+        high_level_actions = torch.tensor([0.5, 0., 0.], dtype=torch.float).repeat(self.obs_buf.shape[0], 1).to(self.device)
         # !!!!!!!
         actions = self.low_level_policy.apply(self.obs_buf, high_level_actions)
         step_return = super().step(actions)
@@ -234,6 +236,6 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         # raise NotImplementedError
         # Here we get low level observations and need to transform them to high level observations
         # This will probably also need customization of the configuration
-        observations = super().get_observations(self)  # self.obs_buf
+        observations = super().get_observations()  # self.obs_buf
         modified_observations = observations
         return modified_observations

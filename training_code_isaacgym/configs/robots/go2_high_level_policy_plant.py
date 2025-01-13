@@ -13,8 +13,7 @@ class GO2HighLevelPlantPolicyCfg(LeggedRobotCfg):
     name = "go2_default"
 
     class init_state(LeggedRobotCfg.init_state):
-
-        pos = [0.0, 0.0, 0.42]  # x,y,z [m]
+        pos = [0.0, 0.0, 0.4]  # x,y,z [m]
         default_joint_angles = {  # = target angles [rad] when action = 0.0
             "FL_hip_joint": 0.1,  # [rad]
             "RL_hip_joint": 0.1,  # [rad]
@@ -45,7 +44,7 @@ class GO2HighLevelPlantPolicyCfg(LeggedRobotCfg):
         name = "go2"
         foot_name = "foot"
         penalize_contacts_on = ["thigh", "calf"]
-        terminate_after_contacts_on = ["base"]
+        terminate_after_contacts_on = []  # ["base"]
         self_collisions = 1  # 1 to disable, 0 to enable...bitwise filter
 
     class rewards(LeggedRobotCfg.rewards):

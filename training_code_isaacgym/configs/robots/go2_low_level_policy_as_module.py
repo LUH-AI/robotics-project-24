@@ -23,8 +23,9 @@ class LowLevelModule:
         alg_class = eval("PPO")
         self.alg_low: PPO = alg_class(actor_critic_low, device=self.device)
         loaded_dict_low = torch.load(low_lvl_model_path)
-        self.alg_low.actor_critic.load_state_dict(loaded_dict_low['model_state_dict'])
-        self.alg_low.actor_critic.eval()
+        feedback = self.alg_low.actor_critic.load_state_dict(loaded_dict_low['model_state_dict'])
+        print("feedback", feedback)
+        # self.alg_low.actor_critic.eval()
         if self.device is not None:
             self.alg_low.actor_critic.to(self.device)
 
