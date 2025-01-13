@@ -220,8 +220,14 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         """
         # raise NotImplementedError
         # Here we get high level actions and need to translate them to low level actions
-        modified_actions = self.low_level_policy.apply(actions)
-        step_return = super().step(modified_actions)
+        # !!!!!!!
+        # just for test purposes:
+        # overwrites the current high_level_action choice of the high_level_policy with a constant action
+        high_level_actions = actions
+        high_level_actions = torch.tensor([0, 0, 0.4], dtype=torch.float).repeat(10, 1).to(self.device)
+        # !!!!!!!
+        actions = self.low_level_policy.apply(self.obs_buf, high_level_actions)
+        step_return = super().step(actions)
         return step_return
 
     def get_observations(self):
