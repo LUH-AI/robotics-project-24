@@ -1,6 +1,11 @@
+import os
+import torch
 from legged_gym.envs.base.legged_robot_config import LeggedRobotCfg
+from rsl_rl.modules import ActorCritic
+from rsl_rl.algorithms import PPO
 
 from ..scenes import BaseSceneCfg
+from ..algorithms import ppo_default
 
 
 # this is the GO2RoughCfg copied from unitree_rl_gym repo (do not change, create a new file)
@@ -8,6 +13,7 @@ class GO2HighLevelPlantPolicyCfg(LeggedRobotCfg):
     name = "go2_default"
 
     class init_state(LeggedRobotCfg.init_state):
+
         pos = [0.0, 0.0, 0.42]  # x,y,z [m]
         default_joint_angles = {  # = target angles [rad] when action = 0.0
             "FL_hip_joint": 0.1,  # [rad]

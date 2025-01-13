@@ -6,6 +6,7 @@ from isaacgym import gymapi
 from legged_gym.utils.task_registry import task_registry
 
 from ..configs.robots import GO2DefaultCfg
+from ..configs.robots import LowLevelModule
 from ..configs.scenes import BaseSceneCfg
 from ..configs.algorithms import PPODefaultCfg
 from .compatible_legged_robot import CompatibleLeggedRobot
@@ -46,6 +47,7 @@ class CustomLeggedRobot(CompatibleLeggedRobot):
         super().__init__(cfg, sim_params, physics_engine, sim_device, headless)
         # for language server purposes only
         self.cfg: GO2DefaultCfg = self.cfg
+        self.low_level_policy = LowLevelModule(num_low_lvl_actions=self.env.num_actions)
 
     def _create_ground_plane(self):
         """Adds a ground plane to the simulation, sets friction and restitution based on the cfg.
@@ -109,13 +111,13 @@ class CustomLeggedRobot(CompatibleLeggedRobot):
         """ Computes observations
         """
         self.obs_buf = torch.cat((  self.base_lin_vel * self.obs_scales.lin_vel,
-                                    self.base_ang_vel  * self.obs_scales.ang_vel,
+                                    self.base_ang_vel * self.obs_scales.ang_vel,
                                     self.projected_gravity,
                                     self.commands[:, :3] * self.commands_scale,
                                     (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
                                     self.dof_vel * self.obs_scales.dof_vel,
                                     self.actions
-                                    ),dim=-1)
+                                    ), dim=-1)
         # All entries in torch.cat have dimensions, n_envs * n where you can determine n, but have to add it to n_obs in the configuration of the robot
         # add perceptive inputs if not blind
         # add noise if needed
@@ -195,13 +197,13 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         """ Computes observations
         """
         self.obs_buf = torch.cat((  self.base_lin_vel * self.obs_scales.lin_vel,
-                                    self.base_ang_vel  * self.obs_scales.ang_vel,
+                                    self.base_ang_vel * self.obs_scales.ang_vel,
                                     self.projected_gravity,
                                     self.commands[:, :3] * self.commands_scale,
                                     (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
                                     self.dof_vel * self.obs_scales.dof_vel,
                                     self.actions
-                                    ),dim=-1)
+                                    ), dim=-1)
         # All entries in torch.cat have dimensions, n_envs * n where you can determine n, but have to add it to n_obs in the configuration of the robot
         # add perceptive inputs if not blind
         # add noise if needed
@@ -216,16 +218,16 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         Args:
             actions (torch.Tensor): Tensor of shape (num_envs, num_actions_per_env)
         """
-        raise NotImplementedError
+        # raise NotImplementedError
         # Here we get high level actions and need to translate them to low level actions
-        modified_actions = actions
+        modified_actions = self.low_level_policy.apply(actions)
         step_return = super().step(modified_actions)
         return step_return
 
     def get_observations(self):
-        raise NotImplementedError
+        # raise NotImplementedError
         # Here we get low level observations and need to transform them to high level observations
         # This will probably also need customization of the configuration
-        observations = self.obs_buf
+        observations = super().get_observations(self)  # self.obs_buf
         modified_observations = observations
         return modified_observations
