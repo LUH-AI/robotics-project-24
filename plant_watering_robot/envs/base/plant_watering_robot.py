@@ -197,7 +197,8 @@ class PlantWateringRobot(BaseTask):
 
         # Set the first command (index 0) for each robot to 0.5
         #set fixed command to let the robot rotate
-        self.actions[:, 2] = 0.5
+        #print(self.actions.shape)
+        self.actions = torch.tensor([0, 0, 0.4], dtype=torch.float).repeat(10, 1).to(self.device)
         self.low_level_obs_buf = torch.cat((  self.base_lin_vel * self.obs_scales.lin_vel,
                                     self.base_ang_vel  * self.obs_scales.ang_vel,
                                     self.projected_gravity,
@@ -206,6 +207,7 @@ class PlantWateringRobot(BaseTask):
                                     self.dof_vel * self.obs_scales.dof_vel,
                                     self.low_level_actions
                                     ),dim=-1)
+        #print(self.low_level_obs_buf[0])
     
     def compute_observations(self):
         self.obs = torch.cat((  self.base_lin_vel * self.obs_scales.lin_vel,
