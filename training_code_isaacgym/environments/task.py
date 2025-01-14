@@ -117,11 +117,9 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         
         # Collect plant-related features directly from detected objects
         plants = [plant for obj in detected_objects for plant in obj["plants"]]
-        env_indices = [obj["env_idx"] for obj in detected_objects for _ in obj["plants"]]
     
         plant_distances = torch.tensor([plant["distance"] for plant in plants], device=self.device).unsqueeze(1)
         plant_angles = torch.tensor([plant["angle"] for plant in plants], device=self.device).unsqueeze(1)
-        env_indices_tensor = torch.tensor(env_indices, device=self.device).unsqueeze(1)
     
         # Base observation components combined with plant-related features
         self.obs_buf = torch.cat(
@@ -133,7 +131,6 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
                 (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
                 self.dof_vel * self.obs_scales.dof_vel,
                 self.actions,
-                env_indices_tensor,
                 plant_distances,
                 plant_angles,
             ),
@@ -179,6 +176,13 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
                         "location": plant_location,
                         "distance": distance,
                         "angle": angle
+                    })
+                else:
+                    # TODO think about best padding value for plants outside fov / (handling environments with different numbers of objects)
+                    plants.append({
+                        "location": plant_location,
+                        "distance": -1,
+                        "angle": -1
                     })
 
             detected_objects.append({

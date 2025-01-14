@@ -9,6 +9,9 @@ from ..scenes import BaseSceneCfg
 class GO2HighLevelPlantPolicyCfg(LeggedRobotCfg):
     name = "go2_default-high-level-policy_plant"
 
+    class env(LeggedRobotCfg.env):
+        num_observations = 50
+
     class init_state(LeggedRobotCfg.init_state):
         pos = [0.0, 0.0, 0.42]  # x,y,z [m]
         default_joint_angles = {  # = target angles [rad] when action = 0.0
