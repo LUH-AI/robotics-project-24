@@ -6,7 +6,7 @@ from isaacgym import gymapi
 
 from legged_gym.utils.task_registry import task_registry
 
-from ..configs.robots import GO2DefaultCfg
+from ..configs.robots import GO2DefaultCfg, GO2HighLevelPlantPolicyCfg
 from ..configs.scenes import BaseSceneCfg
 from ..configs.algorithms import PPODefaultCfg
 from .compatible_legged_robot import CompatibleLeggedRobot
@@ -84,16 +84,16 @@ class CustomLeggedRobot(CompatibleLeggedRobot):
             ) * self.noise_scale_vec
 
     # add custom rewards... here (use your robot_cfg for control)
-    
+
 
 class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
     def __init__(
-        self, cfg: GO2DefaultCfg, sim_params, physics_engine, sim_device, headless
+        self, cfg: GO2HighLevelPlantPolicyCfg, sim_params, physics_engine, sim_device, headless
     ):
         self._prepare_camera(cfg.camera)
         super().__init__(cfg, sim_params, physics_engine, sim_device, headless)
         # for language server purposes only
-        self.cfg: GO2DefaultCfg = self.cfg
+        self.cfg: GO2HighLevelPlantPolicyCfg = self.cfg
 
         self.absolute_plant_locations: torch.Tensor
         """
@@ -118,8 +118,8 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         # Collect plant-related features directly from detected objects
         plants = [plant for obj in detected_objects for plant in obj["plants"]]
     
-        plant_distances = torch.tensor([plant["distance"] for plant in plants], device=self.device).unsqueeze(1)
-        plant_angles = torch.tensor([plant["angle"] for plant in plants], device=self.device).unsqueeze(1)
+        self.plant_distances = torch.tensor([plant["distance"] for plant in plants], device=self.device).unsqueeze(1)
+        self.plant_angles = torch.tensor([plant["angle"] for plant in plants], device=self.device).unsqueeze(1)
     
         # Base observation components combined with plant-related features
         self.obs_buf = torch.cat(
@@ -131,8 +131,8 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
                 (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
                 self.dof_vel * self.obs_scales.dof_vel,
                 self.actions,
-                plant_distances,
-                plant_angles,
+                self.plant_distances,
+                self.plant_angles,
             ),
             dim=-1,
         )
@@ -246,3 +246,49 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         super().render(sync_frame_time)
         # This renders all cameras each simulation step
         self.gym.render_all_camera_sensors(self.sim)
+
+
+    # rewards for single plant environments
+    def _reward_plant_distances(self):
+        """Rewards quadratic inverse distance of robot to plants
+        (currently it does not take into account plants outside the fov)
+
+        Returns:
+            torch.Tensor: Reward for distance to plants
+        """
+        reward = torch.zeros_like(self.plant_distances)
+        reward[self.plant_distances > 0] = (1 / self.plant_distances[self.plant_distances > 0]) ** 2
+        return torch.mean(reward, dim=1)
+    
+    def _reward_robot_angle_to_plants(self):
+        """Rewards negative angle to the nearest plant
+
+        Returns:
+            torch.Tensor: Reward for approaching the plant with zero angle
+        """
+        reward = torch.zeros_like(self.plant_angles)
+        closest_plants = torch.argmin(self.plant_distances, dim=1, keepdim=True)
+        reward[closest_plants] = - self.plant_angles[closest_plants]
+        return torch.sum(reward)
+    
+    def _reward_robot_watering_height(self):
+        """Rewards height of robot when it is close to a plant
+
+        Returns:
+            torch.Tensor: Reward for approaching the plant with full height of robot
+        """
+        reward = torch.zeros_like(self.plant_distances)
+
+        reward[self.plant_distances < self.cfg.rewards.watering_distance_threshold_max] = self.robot_height # TODO insert correct parameter
+        return torch.max(reward, dim=1)
+    
+    def _reward_plant_watering(self):
+        """Rewards plant watering action if conditions are met
+
+        Returns:
+            torch.Tensor: Reward for watering action if positioning is correct
+        """
+        reward = torch.zeros_like(self.actions) #TODO action placeholder
+        #TODO correct index of watering action
+        reward[self.actions[:, -1].to(dtype=torch.bool) and self.cfg.rewards.min_watering_distance < torch.min(self.plant_distances, dim=1) < self.cfg.rewards.max_watering_distance and self.plant_angles[:, torch.argmin(self.plant_distances, dim=1)] < self.cfg.rewards.max_watering_angle] = 1.0
+        return reward

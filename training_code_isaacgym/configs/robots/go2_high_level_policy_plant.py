@@ -47,13 +47,22 @@ class GO2HighLevelPlantPolicyCfg(LeggedRobotCfg):
         terminate_after_contacts_on = ["base"]
         self_collisions = 1  # 1 to disable, 0 to enable...bitwise filter
 
-    class rewards(LeggedRobotCfg.rewards):
-        soft_dof_pos_limit = 0.9
-        base_height_target = 0.25
+    class rewards():
+        # TODO check if using False results in any problems
+        only_positive_rewards = False # if true negative total rewards are clipped at zero (avoids early termination problems)
 
-        class scales(LeggedRobotCfg.rewards.scales):
-            torques = -0.0002
-            dof_pos_limits = -10.0
+        class scales():
+            # TODO reward scaling
+            plant_distances = 1.0
+            robot_angle_to_plants = 1.0
+            robot_watering_height = 1.0
+            plant_watering = 1.0
+
+        max_watering_distance = 0.5 #TODO
+        min_watering_distance = 0.2 #TODO
+        max_watering_angle = 0.174 # 10 degrees TODO
+
+
 
     # for language server purposes (the selected scene config is added automatically)
     class scene(BaseSceneCfg):
