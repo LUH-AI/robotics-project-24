@@ -1,14 +1,8 @@
-from typing import Any, Callable, List
-import warnings
+from typing import Callable
 
 import torch
-import cv2
-import os
-import sys
 
 from isaacgym import gymapi
-from isaacgym.torch_utils import *
-from legged_gym import LEGGED_GYM_ROOT_DIR
 
 from legged_gym.utils.task_registry import task_registry
 
@@ -21,9 +15,6 @@ from . import task_utils
 
 GO2DefaultCfg()
 # do CONFIGURABLE adaptations in this file
-
-import numpy as np
-
 
 
 # register all tasks derived from CustomLeggedRobot
