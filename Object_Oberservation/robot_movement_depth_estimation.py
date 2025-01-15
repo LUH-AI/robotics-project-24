@@ -1,7 +1,7 @@
 #type: ignore
 
 import math
-import os
+import os, sys
 
 import cv2
 import numpy as np
@@ -21,7 +21,7 @@ images_path = os.path.join(dataset_path, "images")
 
 # Parameter
 conf_threshold = 0.5
-real_pot_width_cm = 30  # Breite des Topfes in cm
+real_pot_width_cm = 20  # Breite des Topfes in cm
 focal_length = 800  # Beispielwert für die Kamerafokallänge (angepasst an die Kalibrierung)
 image_center_x = 640  # Beispielwert für Bildmitte in Pixeln (angepasst an die Kameradaten)
 field_of_view = 120  # Sichtfeld der Kamera in Grad
@@ -92,18 +92,20 @@ def main():  # noqa: D103
 
     cv2.namedWindow("Erkannte_Objekte", cv2.WINDOW_AUTOSIZE)
 
+    ChannelFactoryInitialize(0, "eno1")
+    """
     if len(sys.argv)>1:
         ChannelFactoryInitialize(0, "eno1") # Das hier ggf anpassen was im Networkmanager steht
     else:
         ChannelFactoryInitialize(0)
-
+    """
     #urdf_loader = URDFLoader()
 
     client = VideoClient()  # Create a video client
     client.SetTimeout(3.0)
     client.Init()
 
-    sport_client = SportClient()  
+    sport_client = SportClient()
     sport_client.SetTimeout(10.0)
     sport_client.Init()
 
@@ -120,7 +122,7 @@ def main():  # noqa: D103
 
 
             # Prediction durchführen
-            results = model(image)
+            results = model(image, verbose=False)
             plants = []
             pot_positions = []
 
@@ -134,10 +136,6 @@ def main():  # noqa: D103
                     confidence = box.conf[0].cpu().numpy()
 
                     if confidence > conf_threshold:
-                        label = f"Class {int(cls)}: {confidence:.2f}"
-                        color = (0, 255, 0)  # Grün
-                        cv2.rectangle(image, (int(x1), int(y1)), (int(x2), int(y2)), color, 2)
-                        cv2.putText(image, label, (int(x1), int(y1) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
                         x_center = (x1 + x2) / 2
                         angle = calculate_angle(x_center, image.shape[1])
@@ -150,26 +148,40 @@ def main():  # noqa: D103
                             if distance < closest_pot[0]:
                                 closest_pot = [distance, angle]
 
+                            label = f"Class {int(cls)}: {confidence:.2f}, Distance {int(distance)}"
+                        else:
+                            label = f"Class {int(cls)}: {confidence:.2f}"
+                        color = (0, 255, 0)  # Grün
+                        cv2.rectangle(image, (int(x1), int(y1)), (int(x2), int(y2)), color, 2)
+                        cv2.putText(image, label, (int(x1), int(y1) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+
             # Lokale Karte aktualisieren
             update_local_map(robot_position, plants, pot_positions)
             if closest_pot[1] is None:
                 sport_client.Move(0,0,0)# Hier ggf den Roboter drehen lassen bis er was erkennt
+                print("NIX ERKANNT")
             else:
+                print("Distance: ",closest_pot[0],"ANGLE: ",closest_pot[1])
                 if abs (closest_pot[1]) < 10:
                     if closest_pot[0] > 100: #cm
-                        sport_client.move(1,0,0)
+                        sport_client.Move(1,0,0)
+                        print("MOVE FORWARD")
                     else: #Hier ggf aufs Lidar wechseln
                         sport_client.Move(0,0,0)
+                        print("STOP BECAUSE TOO CLOSE")
                 else:
+                    # Hier ggf links und rechts vertauscht
                     if closest_pot[1] < 0:#Hier ggf den angle an steering mappen
-                        sport_client.move(0,0,1)
+                        sport_client.Move(0,0,1)
+                        print("TURN ROBOT LEFT")
                     else:
-                        sport_client.move(0,0,-1)
+                        sport_client.Move(0,0,-1)
+                        print("TURN ROBOT RIGHT")
             # Bild anzeigen
             cv2.imshow("Erkannte_Objekte", image)
 
             # Warten, bis eine Taste gedrückt wird
-            cv2.waitKey(0)
+            cv2.waitKey(1)
 
     # OpenCV-Fenster schließen
     cv2.destroyAllWindows()
