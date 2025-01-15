@@ -2,15 +2,18 @@
 
 import math
 import os, sys
-
+import signal
 import cv2
 import numpy as np
 import torch
 from ultralytics import YOLO
-from unitree_sdk2py.core.channel import ChannelFactoryInitialize
+from unitree_sdk2py.core.channel import ChannelFactoryInitialize, ChannelSubscriber
 from unitree_sdk2py.go2.sport.sport_client import (
     SportClient,
 )
+from unitree_sdk2py.idl.unitree_go.msg.dds_ import LowState_
+import unitree_legged_const as go2
+
 from unitree_sdk2py.go2.video.video_client import VideoClient
 
 # Konfiguration
@@ -22,11 +25,23 @@ images_path = os.path.join(dataset_path, "images")
 # Parameter
 conf_threshold = 0.5
 real_pot_width_cm = 20  # Breite des Topfes in cm
-focal_length = 800  # Beispielwert für die Kamerafokallänge (angepasst an die Kalibrierung)
+focal_length = 1200  # Beispielwert für die Kamerafokallänge (angepasst an die Kalibrierung)
 image_center_x = 640  # Beispielwert für Bildmitte in Pixeln (angepasst an die Kameradaten)
 field_of_view = 120  # Sichtfeld der Kamera in Grad
 
 map_size = 1000
+
+# Handler-Methode: Signal für KeyboardInterrupt abfangen
+def sigint_handler(signal, frame):
+    print ('--> KeyboardInterrupt abgefangen')
+#Programm abbrechen, sonst läuft loop weiter
+    sys.exit(0)
+
+def LowStateMessageHandler(self, msg: LowState_):
+    self.low_state = msg
+    print("FR_0 motor state: ", msg.motor_state[go2.LegID["FR_0"]])
+    print("IMU state: ", msg.imu_state)
+    print("Battery state: voltage: ", msg.power_v, "current: ", msg.power_a)
 
 def calculate_distance(pot_width_pixels):
     """Berechnet die Entfernung anhand der Breite des Topfes in Pixeln."""
@@ -78,12 +93,13 @@ def update_local_map(robot_position, plants, pot_positions):
         pot_y = int(robot_y - distance * math.sin(math.radians(angle)))
         #pot_x = max(0,min(500,pot_x))
         #pot_y = max(0,min(500,pot_y))
-        print("Pot distance: ",distance, " Angle: ", angle, "X: ",pot_x," Y: ",pot_y)
+        #print("Pot distance: ",distance, " Angle: ", angle, "X: ",pot_x," Y: ",pot_y)
         cv2.circle(map_image, (pot_x, pot_y), 5, (0, 0, 255), -1)  # Topf als roter Kreis
 
     cv2.imshow("Lokale Karte", map_image)
 
 def main():  # noqa: D103
+    signal.signal(signal.SIGINT, sigint_handler)
     # YOLO-Modell laden
     model = YOLO(model_path)
 
@@ -92,7 +108,7 @@ def main():  # noqa: D103
 
     cv2.namedWindow("Erkannte_Objekte", cv2.WINDOW_AUTOSIZE)
 
-    ChannelFactoryInitialize(0, "eno1")
+    ChannelFactoryInitialize(0)
     """
     if len(sys.argv)>1:
         ChannelFactoryInitialize(0, "eno1") # Das hier ggf anpassen was im Networkmanager steht
@@ -110,6 +126,10 @@ def main():  # noqa: D103
     sport_client.Init()
 
     code, data = client.GetImageSample()
+
+    #lowstate_subscriber = ChannelSubscriber("rt/lowstate", LowState_)
+    #lowstate_subscriber.Init(LowStateMessageHandler, 10)
+
 
     # Alle Bilder im Ordner durchlaufen
     while code == 0:
@@ -162,9 +182,9 @@ def main():  # noqa: D103
                 print("NIX ERKANNT")
             else:
                 print("Distance: ",closest_pot[0],"ANGLE: ",closest_pot[1])
-                if abs (closest_pot[1]) < 10:
+                if abs (closest_pot[1]) < 20:
                     if closest_pot[0] > 100: #cm
-                        sport_client.Move(1,0,0)
+                        #sport_client.Move(1.0,0,0)
                         print("MOVE FORWARD")
                     else: #Hier ggf aufs Lidar wechseln
                         sport_client.Move(0,0,0)
@@ -172,11 +192,11 @@ def main():  # noqa: D103
                 else:
                     # Hier ggf links und rechts vertauscht
                     if closest_pot[1] < 0:#Hier ggf den angle an steering mappen
-                        sport_client.Move(0,0,1)
-                        print("TURN ROBOT LEFT")
-                    else:
-                        sport_client.Move(0,0,-1)
+                        sport_client.Move(0,0,-1.0)
                         print("TURN ROBOT RIGHT")
+                    else:
+                        sport_client.Move(0,0,1.0)
+                        print("TURN ROBOT LEFT")
             # Bild anzeigen
             cv2.imshow("Erkannte_Objekte", image)
 
