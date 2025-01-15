@@ -1,4 +1,4 @@
-ilmport numpy as np
+import numpy as np
 
 from isaacgym import gymapi
 from legged_gym.envs.base.legged_robot_config import LeggedRobotCfg
@@ -20,10 +20,6 @@ class GO2HighLevelPlantPolicyCfg(GO2DefaultCfg):
         class scales(LeggedRobotCfg.rewards.scales):
             torques = -0.0002
             dof_pos_limits = -10.0
-
-    # for language server purposes (the selected scene config is added automatically)
-    class scene(BaseSceneCfg):
-        pass
 
     # robot camera:
     class camera:
