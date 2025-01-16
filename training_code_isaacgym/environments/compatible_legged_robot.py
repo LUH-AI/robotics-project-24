@@ -313,11 +313,13 @@ class CompatibleLeggedRobot(LeggedRobot, ABC):
         )  # [7:10]: lin vel, [10:13]: ang vel
 
         _root_states = self.root_states.clone()
-        #TODO randomize object positions on every reset and not just during initialization
+        # TODO randomize object positions on every reset and not just during initialization
         reset_indices = task_utils.get_reset_indices(env_ids, self.num_objects)
 
-        self.root_states_complete[reset_indices] = self.root_states_initialization[reset_indices]
-        self.root_states_complete[::self.num_objects] = _root_states
+        self.root_states_complete[reset_indices] = self.root_states_initialization[
+            reset_indices
+        ]
+        self.root_states_complete[:: self.num_objects] = _root_states
 
         self.gym.set_actor_root_state_tensor_indexed(
             self.sim,
@@ -332,10 +334,19 @@ class CompatibleLeggedRobot(LeggedRobot, ABC):
         self.root_states[:, 7:9] = torch_rand_float(
             -max_vel, max_vel, (self.num_envs, 2), device=self.device
         )  # lin vel x/y
-        self.root_states_complete[::self.num_objects] = self.root_states
-        indices = torch.arange(0, self.num_envs * self.num_objects, self.num_objects, dtype=torch.int32, device=self.device)
+        self.root_states_complete[:: self.num_objects] = self.root_states
+        indices = torch.arange(
+            0,
+            self.num_envs * self.num_objects,
+            self.num_objects,
+            dtype=torch.int32,
+            device=self.device,
+        )
         self.gym.set_actor_root_state_tensor_indexed(
-            self.sim, gymtorch.unwrap_tensor(self.root_states_complete), gymtorch.unwrap_tensor(indices), len(indices)
+            self.sim,
+            gymtorch.unwrap_tensor(self.root_states_complete),
+            gymtorch.unwrap_tensor(indices),
+            len(indices),
         )
 
     # ----------------------------------------
@@ -354,7 +365,7 @@ class CompatibleLeggedRobot(LeggedRobot, ABC):
         self.root_states_initialization = self.root_states_complete.clone()
         # root_states_complete includes root_states of static objects which is not desired for the following logic
         self.num_objects = getattr(self, "num_static_objects", 0) + 1
-        self.root_states = self.root_states_complete[::self.num_objects]
+        self.root_states = self.root_states_complete[:: self.num_objects]
 
         self.dof_state = gymtorch.wrap_tensor(dof_state_tensor)
         self.dof_pos = self.dof_state.view(self.num_envs, self.num_dof, 2)[..., 0]

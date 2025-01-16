@@ -60,6 +60,7 @@ def validate_location(
             return False
     return True
 
+
 def get_reset_indices(env_ids: torch.Tensor, num_objects: int) -> torch.Tensor:
     """Creates a tensor with the indices for all objects within the specified environments.
 
@@ -70,5 +71,7 @@ def get_reset_indices(env_ids: torch.Tensor, num_objects: int) -> torch.Tensor:
     Returns:
         torch.Tensor: Tensor with all indices for specified environments (torch.int32)
     """
-    stubs = torch.arange(0, num_objects, device=env_ids.device).repeat((len(env_ids), 1))
+    stubs = torch.arange(0, num_objects, device=env_ids.device).repeat(
+        (len(env_ids), 1)
+    )
     return (stubs + env_ids.unsqueeze(1) * num_objects).view(-1).to(dtype=torch.int32)

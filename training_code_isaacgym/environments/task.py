@@ -60,7 +60,6 @@ class CustomLeggedRobot(CompatibleLeggedRobot):
         # for language server purposes only
         self.cfg: GO2DefaultCfg = self.cfg
 
-
     def compute_observations(self):
         """Computes observations"""
         self.obs_buf = torch.cat(
@@ -104,7 +103,6 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         # for language server purposes only
         self.cfg: GO2DefaultCfg = self.cfg
 
-
     def _prepare_camera(self, camera):
         print("Preparing")
         self.camera_props = gymapi.CameraProperties()
@@ -126,8 +124,10 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         plant_angles = torch.tensor([plant["angle"] for plant in plants], device=self.device).unsqueeze(1)
 
         if not len(plant_distances) or not len(plant_angles):
-            raise ValueError("No plants are present in the environment. Probably you use the ground_plane scene. Use a scene with a plant present (e.g. --scene single_plant)")
-    
+            raise ValueError(
+                "No plants are present in the environment. Probably you use the ground_plane scene. Use a scene with a plant present (e.g. --scene single_plant)"
+            )
+
         # Base observation components combined with plant-related features
         self.obs_buf = torch.cat(
             (
