@@ -7,6 +7,11 @@ from ..scenes import BaseSceneCfg
 class GO2DefaultCfg(LeggedRobotCfg):
     name = "go2_default"
 
+    class env(LeggedRobotCfg.env):
+        num_envs = 4096
+        num_observations = 48
+        num_actions = 12
+
     class init_state(LeggedRobotCfg.init_state):
         pos = [0.0, 0.0, 0.42]  # x,y,z [m]
         default_joint_angles = {  # = target angles [rad] when action = 0.0
