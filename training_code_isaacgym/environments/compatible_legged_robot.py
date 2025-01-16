@@ -109,7 +109,7 @@ class CompatibleLeggedRobot(LeggedRobot, ABC):
             self.object_handles[env_idx].append(object_handle)
 
         plant_locations = torch.stack(_plant_locations).unsqueeze(0)
-        if hasattr(self, "absolute_plant_locations"):
+        if len(self.absolute_plant_locations):
             self.absolute_plant_locations = torch.cat(
                 (self.absolute_plant_locations, plant_locations)
             )
