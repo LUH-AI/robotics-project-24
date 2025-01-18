@@ -109,7 +109,7 @@ class CompatibleLeggedRobot(LeggedRobot, ABC):
             self.object_handles[env_idx].append(object_handle)
 
         plant_locations = torch.stack(_plant_locations).unsqueeze(0)
-        if hasattr(self, "absolute_plant_locations"):
+        if len(self.absolute_plant_locations):
             self.absolute_plant_locations = torch.cat(
                 (self.absolute_plant_locations, plant_locations)
             )
@@ -312,12 +312,20 @@ class CompatibleLeggedRobot(LeggedRobot, ABC):
             -0.5, 0.5, (len(env_ids), 6), device=self.device
         )  # [7:10]: lin vel, [10:13]: ang vel
 
-        self.root_states_complete[self.root_state_indices] = self.root_states
+        _root_states = self.root_states.clone()
+        # TODO randomize object positions on every reset and not just during initialization
+        reset_indices = task_utils.get_reset_indices(env_ids, self.num_objects)
+
+        self.root_states_complete[reset_indices] = self.root_states_initialization[
+            reset_indices
+        ]
+        self.root_states_complete[:: self.num_objects] = _root_states
+
         self.gym.set_actor_root_state_tensor_indexed(
             self.sim,
             gymtorch.unwrap_tensor(self.root_states_complete),
-            gymtorch.unwrap_tensor(self.root_state_indices),
-            len(self.root_state_indices),
+            gymtorch.unwrap_tensor(reset_indices),
+            len(reset_indices),
         )
 
     def _push_robots(self):
@@ -326,9 +334,19 @@ class CompatibleLeggedRobot(LeggedRobot, ABC):
         self.root_states[:, 7:9] = torch_rand_float(
             -max_vel, max_vel, (self.num_envs, 2), device=self.device
         )  # lin vel x/y
-        self.root_states_complete[self.root_state_indices] = self.root_states
-        self.gym.set_actor_root_state_tensor(
-            self.sim, gymtorch.unwrap_tensor(self.root_states_complete)
+        self.root_states_complete[:: self.num_objects] = self.root_states
+        indices = torch.arange(
+            0,
+            self.num_envs * self.num_objects,
+            self.num_objects,
+            dtype=torch.int32,
+            device=self.device,
+        )
+        self.gym.set_actor_root_state_tensor_indexed(
+            self.sim,
+            gymtorch.unwrap_tensor(self.root_states_complete),
+            gymtorch.unwrap_tensor(indices),
+            len(indices),
         )
 
     # ----------------------------------------
@@ -344,14 +362,10 @@ class CompatibleLeggedRobot(LeggedRobot, ABC):
 
         # create some wrapper tensors for different slices
         self.root_states_complete = gymtorch.wrap_tensor(actor_root_state)
+        self.root_states_initialization = self.root_states_complete.clone()
         # root_states_complete includes root_states of static objects which is not desired for the following logic
-        self.root_state_indices = torch.arange(
-            0,
-            len(self.root_states_complete),
-            step=getattr(self, "num_static_objects", 0) + 1,
-            dtype=torch.int32,
-        ).to(self.device)
-        self.root_states = self.root_states_complete[self.root_state_indices]
+        self.num_objects = getattr(self, "num_static_objects", 0) + 1
+        self.root_states = self.root_states_complete[:: self.num_objects]
 
         self.dof_state = gymtorch.wrap_tensor(dof_state_tensor)
         self.dof_pos = self.dof_state.view(self.num_envs, self.num_dof, 2)[..., 0]

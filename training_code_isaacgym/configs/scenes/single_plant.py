@@ -9,7 +9,7 @@ plant_path = asset_path / "urdf" / "plant1.urdf"
 
 
 class SinglePlantCfg(BaseSceneCfg):
-    name = "empty_room_5x5"
+    name = "single_plant"
     static_objects = [
         StaticObject(
             "walls",
