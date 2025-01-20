@@ -310,7 +310,7 @@ class CompatibleLeggedRobot(LeggedRobot, ABC):
         # base velocities
         self.root_states[env_ids, 7:13] = torch_rand_float(
             -0.5, 0.5, (len(env_ids), 6), device=self.device
-        ) * 0.5  # [7:10]: lin vel, [10:13]: ang vel
+        )  # [7:10]: lin vel, [10:13]: ang vel
 
         _root_states = self.root_states.clone()
         # TODO randomize object positions on every reset and not just during initialization

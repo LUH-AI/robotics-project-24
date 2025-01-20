@@ -22,7 +22,7 @@ class GO2HighLevelPlantPolicyCfg(LeggedRobotCfg):  # GO2DefaultCfg
         num_envs = 32
         num_observations = 9  # [TODO: this is not properly set]
         num_privileged_obs = None  # if not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned otherwise
-        num_actions = 12  # [TODO: this is not properly set]
+        num_actions = 3  # [TODO: this is not properly set]
         env_spacing = 3.  # not used with heightfields/trimeshes
         send_timeouts = True  # send time out information to the algorithm
         episode_length_s = 20  # episode length in seconds
@@ -68,10 +68,15 @@ class GO2HighLevelPlantPolicyCfg(LeggedRobotCfg):  # GO2DefaultCfg
     class rewards(LeggedRobotCfg.rewards):
         soft_dof_pos_limit = 0.9
         base_height_target = 0.25
+        # Custom rewards in order to walk to and reach the plant
+        straight_exploration = 10.0
+        # plant_closeness = 5.0
+        # plant_ahead = 5.0
 
         class scales(LeggedRobotCfg.rewards.scales):
             # only rewards that have a scale will be added (reward is named "_reward_{SCALE_NAME}")
-            # [TODO: remove these reward scales, as their reward is not relevant for the high level policy anymore (left for now to h ave dummy values)]
+            # [TODO: remove these reward scales, as their reward is not relevant for the high level policy anymore
+            #  TODO: (left for now to have dummy values)]
             torques = -0.0002
             dof_pos_limits = -10.0
 

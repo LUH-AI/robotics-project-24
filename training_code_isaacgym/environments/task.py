@@ -184,15 +184,19 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         self.camera_props.enable_tensors = camera.enable_tensors
         self.camera_props.use_collision_geometry = True
 
-    def compute_low_level_observations(self):
-        """Computes observations, including distances and angles to detected plants."""
+    def compute_low_level_observations(self, high_level_actions):
+        """
+        Computes observations, including distances and angles to detected plants.
+        Args:
+            high_level_actions (torch.Tensor): Tensor of shape (num_envs, num_actions_per_env)
+        """
         # Base observation components combined with plant-related features
         self.low_level_obs_buf = torch.cat(
             (
                 self.base_lin_vel * self.obs_scales.lin_vel,
                 self.base_ang_vel * self.obs_scales.ang_vel,
                 self.projected_gravity,
-                self.commands[:, :3] * self.commands_scale,
+                high_level_actions,  # * self.commands_scale,
                 (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
                 self.dof_vel * self.obs_scales.dof_vel,
                 self.actions
@@ -205,10 +209,10 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         """ Computes observations
         """
         # Call object detection method
-        detected_objects = self._detect_objects()
+        self.detected_objects = self._detect_objects()
 
         # Collect plant-related features directly from detected objects
-        plants = [plant for obj in detected_objects for plant in obj["plants"]]
+        plants = [plant for obj in self.detected_objects for plant in obj["plants"]]
 
         plant_probability = torch.tensor([plant["probability"] for plant in plants], device=self.device).unsqueeze(1)
         plant_distances = torch.tensor([plant["distance"] for plant in plants], device=self.device).unsqueeze(1)
@@ -228,6 +232,26 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         return self.obs_buf
 
     # add custom rewards... here (use your robot_cfg for control)
+    def _reward_straight_exploration(self):
+        # Tracking of angular velocity commands (yaw)
+        # Provide slight reward for moving ahead
+        lin_vel_error = torch.sum(torch.square(1.0 - self.base_ang_vel[:, :2]), dim=1)
+        return torch.exp(-lin_vel_error/self.cfg.rewards.tracking_sigma)  # TODO: improve reward
+
+    def _reward_plant_closeness(self):
+        # Tracking of angular velocity commands (yaw)
+        plants = [plant for obj in self.detected_objects for plant in obj["plants"]]
+        plant_probability = torch.tensor([plant["probability"] for plant in plants], device=self.device).unsqueeze(1)
+        plant_distances = torch.tensor([plant["distance"] for plant in plants], device=self.device).unsqueeze(1)
+        return torch.mul(torch.exp(-plant_distances), plant_probability)  # TODO: improve reward
+
+    def _reward_plant_ahead(self):
+        # Tracking of angular velocity commands (yaw)
+        plants = [plant for obj in self.detected_objects for plant in obj["plants"]]
+        plant_probability = torch.tensor([plant["probability"] for plant in plants], device=self.device).unsqueeze(1)
+        plant_angles = torch.tensor([plant["angle"] for plant in plants], device=self.device).unsqueeze(1)
+        return torch.mul(torch.exp(-plant_angles.abs()), plant_probability)  # TODO: improve reward
+
 
     def _detect_objects(self):
         """Detects objects in the environment and classifies them into obstacles and plants/targets.
@@ -255,6 +279,7 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
                 relative_position = plant_location - robot_position
                 angle = torch.atan2(relative_position[1], relative_position[0]) - robot_orientation
                 angle = torch.remainder(angle + torch.pi, 2 * torch.pi) - torch.pi  # Normalize angle to [-pi, pi]
+                # TODO: use a better way of linking distance to a reduced prediction probability
                 probability = 1.0 / (distance/5) ** 0.5
 
                 # Check if the plant is within the robot's field of view (FOV)
@@ -285,13 +310,15 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         """ Apply actions, simulate, call self.post_physics_step()
 
         Args:
-            actions (torch.Tensor): Tensor of shape (num_envs, num_actions_per_env)
+            high_level_actions (torch.Tensor): Tensor of shape (num_envs, num_actions_per_env)
         """
         # Here we get high level actions and need to translate them to low level actions
         # actions are always low_level (dim=12) and high_level_actions are high level (dim=5)
-        self.compute_low_level_observations()
+
+        self.compute_low_level_observations(high_level_actions)
 
         # TODO: replace hardcoded commands with high_level_actions as input
+        '''
         # Begin hardcoded high-level
         rotation_command = torch.clamp(2*torch.mul(self.obs_buf[:, 8], self.obs_buf[:, 6]) + 0.5, min=-1., max=1.)
         self.low_level_obs_buf[:, 9:12] = (torch.tensor([0, 0.0, 0.], dtype=torch.float).
@@ -299,6 +326,7 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         forward = (self.obs_buf[:, 6] > 0.25).int().float() * 1.5
         self.low_level_obs_buf[:, 11] = rotation_command
         self.low_level_obs_buf[:, 9] = forward
+        '''
         # End hardcoded high-level
 
         actions = self.low_level_policy.act_inference(self.low_level_obs_buf)
