@@ -21,7 +21,7 @@ from .legged_robot_config import LeggedRobotCfg
 
 class LeggedRobot(BaseTask):
     def __init__(self, cfg: LeggedRobotCfg, sim_params, physics_engine, sim_device, headless):
-        
+
         """ Parses the provided config file,
             calls create_sim() (which creates, simulation and environments),
             initilizes pytorch buffers used during training
@@ -55,7 +55,7 @@ class LeggedRobot(BaseTask):
         self.camera_props.width = width
         self.camera_props.height = height
         self.camera_props.enable_tensors = tensors
-        
+
 
     def step(self, actions):
         """ Apply actions, simulate, call self.post_physics_step()
@@ -68,7 +68,7 @@ class LeggedRobot(BaseTask):
         #self.actions = torch.clip(actions, -clip_actions, clip_actions).to(self.device)
         self.actions = actions
         # print(f"LeggedRobot.step(actions: {self.actions.shape})")
-        
+
         # step physics and render each frame
         self.render()
         for _ in range(self.cfg.control.decimation):
@@ -80,7 +80,7 @@ class LeggedRobot(BaseTask):
                 sim_time = self.gym.get_sim_time(self.sim)
                 if sim_time-elapsed_time>0:
                     time.sleep(sim_time-elapsed_time)
-            
+
             if self.device == 'cpu':
                 self.gym.fetch_results(self.sim, True)
             self.gym.refresh_dof_state_tensor(self.sim)
@@ -94,7 +94,7 @@ class LeggedRobot(BaseTask):
 
     def post_physics_step(self):
         """ check terminations, compute observations and rewards
-            calls self._post_physics_step_callback() for common computations 
+            calls self._post_physics_step_callback() for common computations
             calls self._draw_debug_vis() if needed
         """
         self.gym.refresh_actor_root_state_tensor(self.sim)
@@ -144,7 +144,7 @@ class LeggedRobot(BaseTask):
         """
         if len(env_ids) == 0:
             return
-        
+
         # reset robot states
         self._reset_dofs(env_ids)
         self._reset_root_states(env_ids)
@@ -167,7 +167,7 @@ class LeggedRobot(BaseTask):
         # send timeout info to the algorithm
         if self.cfg.env.send_timeouts:
             self.extras["time_outs"] = self.time_out_buf
-    
+
     def compute_reward(self):
         """ Compute rewards
             Calls each reward function which had a non-zero scale (processed in self._prepare_reward_function())
@@ -186,7 +186,7 @@ class LeggedRobot(BaseTask):
             rew = self._reward_termination() * self.reward_scales["termination"]
             self.rew_buf += rew
             self.episode_sums["termination"] += rew
-    
+
     def compute_observations(self):
         """ Computes observations
         """
@@ -198,7 +198,7 @@ class LeggedRobot(BaseTask):
                                     self.dof_vel * self.obs_scales.dof_vel,
                                     self.actions,
                                     ),dim=-1)
-        
+
         """ image = self.gym.get_camera_image(self.sim, self.envs[0], self.cameras[0], gymapi.IMAGE_DEPTH)
         print(type(image))
         cv2.imwrite("Test_robo_image.jpeg", image)
@@ -456,9 +456,10 @@ class LeggedRobot(BaseTask):
         self.noise_scale_vec = self._get_noise_scale_vec(self.cfg)
         self.gravity_vec = to_torch(get_axis_params(-1., self.up_axis_idx), device=self.device).repeat((self.num_envs, 1))
         self.forward_vec = to_torch([1., 0., 0.], device=self.device).repeat((self.num_envs, 1))
-        self.torques = torch.zeros(self.num_envs, self.num_actions, dtype=torch.float, device=self.device, requires_grad=False)
-        self.p_gains = torch.zeros(self.num_actions, dtype=torch.float, device=self.device, requires_grad=False)
-        self.d_gains = torch.zeros(self.num_actions, dtype=torch.float, device=self.device, requires_grad=False)
+        self.num_low_lvl_actions = 12  # TODO: define within another class
+        self.torques = torch.zeros(self.num_envs, self.num_low_lvl_actions, dtype=torch.float, device=self.device, requires_grad=False)
+        self.p_gains = torch.zeros(self.num_low_lvl_actions, dtype=torch.float, device=self.device, requires_grad=False)
+        self.d_gains = torch.zeros(self.num_low_lvl_actions, dtype=torch.float, device=self.device, requires_grad=False)
         self.actions = torch.zeros(self.num_envs, self.num_actions, dtype=torch.float, device=self.device, requires_grad=False)
         self.last_actions = torch.zeros(self.num_envs, self.num_actions, dtype=torch.float, device=self.device, requires_grad=False)
         self.last_dof_vel = torch.zeros_like(self.dof_vel)

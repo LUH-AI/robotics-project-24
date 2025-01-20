@@ -13,7 +13,7 @@ from legged_gym import LEGGED_GYM_ROOT_DIR
 from legged_gym.utils.isaacgym_utils import get_euler_xyz as get_euler_xyz_in_tensor
 from .legged_robot import LeggedRobot
 
-from . import task_utils
+from . import utils
 
 
 # DO NOT MAKE MODIFICATIONS IN THIS FILE!!!
@@ -63,19 +63,19 @@ class CompatibleLeggedRobot(LeggedRobot, ABC):
             start_pose = gymapi.Transform()
             location_offset = self.env_origins[env_idx].clone()
             i = 0
-            object_location = task_utils.calculate_random_location(
+            object_location = utils.calculate_random_location(
                 location_offset,
                 static_obj.init_location,
                 static_obj.max_random_loc_offset,
             )
             # does not detect collisions of non-random objects (e.g. walls)
             while i < 10 and static_obj.max_random_loc_offset.any():
-                object_location = task_utils.calculate_random_location(
+                object_location = utils.calculate_random_location(
                     location_offset,
                     static_obj.init_location,
                     static_obj.max_random_loc_offset,
                 )
-                if task_utils.validate_location(
+                if utils.validate_location(
                     static_obj,
                     object_location,
                     robot_position,
@@ -310,11 +310,11 @@ class CompatibleLeggedRobot(LeggedRobot, ABC):
         # base velocities
         self.root_states[env_ids, 7:13] = torch_rand_float(
             -0.5, 0.5, (len(env_ids), 6), device=self.device
-        )  # [7:10]: lin vel, [10:13]: ang vel
+        ) * 0.5  # [7:10]: lin vel, [10:13]: ang vel
 
         _root_states = self.root_states.clone()
         # TODO randomize object positions on every reset and not just during initialization
-        reset_indices = task_utils.get_reset_indices(env_ids, self.num_objects)
+        reset_indices = utils.get_reset_indices(env_ids, self.num_objects)
 
         self.root_states_complete[reset_indices] = self.root_states_initialization[
             reset_indices

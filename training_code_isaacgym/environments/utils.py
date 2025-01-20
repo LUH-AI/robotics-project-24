@@ -1,5 +1,9 @@
 from typing import List
 import torch
+from rsl_rl.modules import ActorCritic
+from ..configs.robots.go2_high_level_policy_plant import GO2HighLevelPlantPolicyCfg
+
+
 
 
 def calculate_random_location(
@@ -75,3 +79,28 @@ def get_reset_indices(env_ids: torch.Tensor, num_objects: int) -> torch.Tensor:
         (len(env_ids), 1)
     )
     return (stubs + env_ids.unsqueeze(1) * num_objects).view(-1).to(dtype=torch.int32)
+
+def load_low_level_policy(cfg: GO2HighLevelPlantPolicyCfg, sim_device):
+    module = eval("ActorCritic")(
+        num_actor_obs=cfg.low_level_policy.num_observations,
+        num_critic_obs=cfg.low_level_policy.num_observations,
+        num_actions=cfg.low_level_policy.num_actions,
+        actor_hidden_dims=[512, 256, 128],
+        critic_hidden_dims=[512, 256, 128],
+    )
+    module = module.to(sim_device)
+    checkpoint = torch.load(cfg.low_level_policy.model_path)
+    print("low level policy", module)
+
+    model_state_dict = checkpoint.get('model_state_dict')
+    if model_state_dict is None:
+        raise ValueError("The checkpoint does not contain a 'model_state_dict' key.")
+
+    try:
+        module.load_state_dict(model_state_dict)
+    except RuntimeError as e:
+        print("\nError while loading state dictionary:")
+        print(e)
+        return None
+
+    return module

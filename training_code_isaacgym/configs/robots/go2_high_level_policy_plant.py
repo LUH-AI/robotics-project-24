@@ -16,15 +16,16 @@ class GO2HighLevelPlantPolicyCfg(LeggedRobotCfg):  # GO2DefaultCfg
         num_observations = 48
         num_actions = 12
         model_path = os.path.join(os.path.dirname(__file__), "../models/model.pt")
+
     # Overwrite env from LeggedrobotCfg
     class env:
         num_envs = 32
-        num_observations = 6  # [TODO: this is not properly set]
-        num_privileged_obs = None # if not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned otherwise
-        num_actions = 3  # [TODO: this is not properly set]
+        num_observations = 9  # [TODO: this is not properly set]
+        num_privileged_obs = None  # if not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned otherwise
+        num_actions = 12  # [TODO: this is not properly set]
         env_spacing = 3.  # not used with heightfields/trimeshes
-        send_timeouts = True # send time out information to the algorithm
-        episode_length_s = 20 # episode length in seconds
+        send_timeouts = True  # send time out information to the algorithm
+        episode_length_s = 20  # episode length in seconds
         test = False
 
 

@@ -15,7 +15,7 @@ You can add custom assets in assets/ to change the robot or your scenes. Therefo
 
 ## Robot Class
 If you need to do more advanced changes than those that can be done by manipulating the configuration files (e.g. reward shaping), you can adapt the robot/environment classes in `environments/`
-**Almost all changes should be done in `task.py` or eventually in `task_utils.py`**. Only adapt code in compatible_legged_robot.py if changes need many modifications in existing code or to prevent duplicated code in low-level and high-level policy classes.
+**Almost all changes should be done in `task.py` or eventually in `utils.py`**. Only adapt code in compatible_legged_robot.py if changes need many modifications in existing code or to prevent duplicated code in low-level and high-level policy classes.
 
 ### Low-Level Policy
 The low-level policy should get high-level actions and the robot joint states as observations and should control the robot joints.
