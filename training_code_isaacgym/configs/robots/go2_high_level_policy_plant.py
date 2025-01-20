@@ -11,7 +11,7 @@ class GO2HighLevelPlantPolicyCfg(GO2DefaultCfg):
     name = "go2_default-high-level-policy_plant"
 
     class env(LeggedRobotCfg.env):
-        num_observations = 50
+        num_observations = 51
 
     class rewards(LeggedRobotCfg.rewards):
         soft_dof_pos_limit = 0.9
