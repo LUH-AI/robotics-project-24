@@ -120,13 +120,9 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         # Collect plant-related features directly from detected objects
         plants = [plant for obj in detected_objects for plant in obj["plants"]]
     
+        plant_probability = torch.tensor([plant["probability"] for plant in plants], device=self.device).unsqueeze(1)
         plant_distances = torch.tensor([plant["distance"] for plant in plants], device=self.device).unsqueeze(1)
         plant_angles = torch.tensor([plant["angle"] for plant in plants], device=self.device).unsqueeze(1)
-
-        if not len(plant_distances) or not len(plant_angles):
-            raise ValueError(
-                "No plants are present in the environment. Probably you use the ground_plane scene. Use a scene with a plant present (e.g. --scene single_plant)"
-            )
 
         # Base observation components combined with plant-related features
         self.obs_buf = torch.cat(
@@ -138,6 +134,7 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
                 (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
                 self.dof_vel * self.obs_scales.dof_vel,
                 self.actions,
+                plant_probability,
                 plant_distances,
                 plant_angles,
             ),
@@ -160,36 +157,38 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         """
         detected_objects = []
         fov_angle = torch.deg2rad(torch.tensor(120.0 / 2))  # Half of 120 degrees in radians
-    
+
         for env_idx in range(self.absolute_plant_locations.shape[0]):
             robot_position = self.base_pos[env_idx]  # Get robot position for the current environment
             robot_orientation = self.rpy[env_idx, 2]  # Get robot yaw (orientation) for the current environment
-    
+
             obstacles = []
             plants = []
 
             for plant_location in self.absolute_plant_locations[env_idx]:
                 # Compute distance from robot to plant
                 distance = torch.norm(plant_location - robot_position)
-    
+
                 # Compute angle from robot to plant
                 relative_position = plant_location - robot_position
                 angle = torch.atan2(relative_position[1], relative_position[0]) - robot_orientation
                 angle = torch.remainder(angle + torch.pi, 2 * torch.pi) - torch.pi  # Normalize angle to [-pi, pi]
-    
+                probability = 1.0 / distance ** 0.5
+
                 # Check if the plant is within the robot's field of view (FOV)
                 if torch.abs(angle) <= fov_angle:
                     plants.append({
                         "location": plant_location,
+                        "probability": probability,
                         "distance": distance,
                         "angle": angle
                     })
                 else:
-                    # TODO think about best padding value for plants outside fov / (handling environments with different numbers of objects)
                     plants.append({
                         "location": plant_location,
-                        "distance": -1,
-                        "angle": -1
+                        "probability": 0,
+                        "distance": 0,
+                        "angle": 0
                     })
 
             detected_objects.append({
@@ -215,8 +214,8 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         depth_arrays = torch.tensor([self.gym.get_camera_image(
             self.sim, self.envs[i], self.cameras[i], gymapi.IMAGE_DEPTH
         ) for i in range(len(self.cameras))]) # Has shape (num_envs, 12) TODO: Check if extra dimension somehow sneaked in
-        #TODO: Add Distance measure to observation / preprocess it to a good range. Currently: -inf = infinitely far away and -0.1 is 10cm away
-        raise NotImplementedError
+        # TODO: Add Distance measure to observation / preprocess it to a good range. Currently: -inf = infinitely far away and -0.1 is 10cm away
+        # raise NotImplementedError
         # Here we get low level observations and need to transform them to high level observations
         # This will probably also need customization of the configuration
         observations = self.obs_buf
