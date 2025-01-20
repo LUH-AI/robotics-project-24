@@ -27,7 +27,7 @@ class GO2HighLevelPlantPolicyCfg(GO2DefaultCfg):
         width = 12
         height = 1
         enable_tensors = True
-        vec_from_body_center = gymapi.Vec3(0.34, 0, 0.021) # Should be closest to reality: (0.34, 0, 0.021)m
+        vec_from_body_center = gymapi.Vec3(0.34, 0, 0.021)  # Should be closest to reality: (0.34, 0, 0.021)m
         rot_of_camera = gymapi.Quat.from_axis_angle(
             gymapi.Vec3(0, 0, 1), np.radians(0)
         )
