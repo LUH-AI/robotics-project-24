@@ -1,4 +1,5 @@
 from typing import List, Any
+import warnings
 import os
 from abc import ABC, abstractmethod
 
@@ -8,10 +9,11 @@ import torch
 from isaacgym.torch_utils import *
 from isaacgym import gymtorch, gymapi
 
-
 from legged_gym import LEGGED_GYM_ROOT_DIR
 from legged_gym.utils.isaacgym_utils import get_euler_xyz as get_euler_xyz_in_tensor
 from .legged_robot import LeggedRobot
+
+from . import task_utils
 
 
 # DO NOT MAKE MODIFICATIONS IN THIS FILE!!!
@@ -20,10 +22,99 @@ from .legged_robot import LeggedRobot
 
 
 class CompatibleLeggedRobot(LeggedRobot, ABC):
+    """This class should not be called directly"""
 
-    @abstractmethod
-    def _place_static_objects(self, env_idx: int, env_handle: Any):
-        raise NotImplementedError()
+    def _place_static_objects(
+        self, env_idx: int, env_handle: Any, robot_position: torch.Tensor
+    ):
+        """Places static objects like walls into the provided environment
+        It is called in the environment creation loop in super()._create_envs()
+
+        Args:
+            env_idx (int): Index of environment
+            env_handle (Any): Environment handle
+            robot_position (torch.Tensor): Robot location
+        """
+        if not len(self.cfg.scene.static_objects):
+            return
+        self.object_handles.append([])
+
+        self.num_static_objects = len(self.cfg.scene.static_objects)
+
+        # move all tensors to device
+        for static_obj in self.cfg.scene.static_objects:
+            static_obj.to(self.device)
+
+        _plant_locations = []
+        other_object_locations = []
+        other_object_sizes = []
+        for object_idx, static_obj in enumerate(self.cfg.scene.static_objects):
+            if len(self.object_assets) - 1 > object_idx:
+                obj_asset = self.object_assets[object_idx]
+            else:
+                obj_asset = self.gym.load_asset(
+                    self.sim,
+                    str(static_obj.asset_root),
+                    str(static_obj.asset_file),
+                    static_obj.asset_options,
+                )
+                self.object_assets.append(obj_asset)
+
+            start_pose = gymapi.Transform()
+            location_offset = self.env_origins[env_idx].clone()
+            i = 0
+            object_location = task_utils.calculate_random_location(
+                location_offset,
+                static_obj.init_location,
+                static_obj.max_random_loc_offset,
+            )
+            # does not detect collisions of non-random objects (e.g. walls)
+            while i < 10 and static_obj.max_random_loc_offset.any():
+                object_location = task_utils.calculate_random_location(
+                    location_offset,
+                    static_obj.init_location,
+                    static_obj.max_random_loc_offset,
+                )
+                if task_utils.validate_location(
+                    static_obj,
+                    object_location,
+                    robot_position,
+                    other_object_locations,
+                    other_object_sizes,
+                ):
+                    break
+                i += 1
+            if i == 10:
+                warnings.warn(
+                    f"Static object could not be placed randomly without collisions ({i} tries). This can cause problems"
+                )
+
+            other_object_locations.append(object_location)
+            other_object_sizes.append(static_obj.size)
+            if static_obj.type == "flower_pot":
+                _plant_locations.append(object_location)
+
+            start_pose.p = gymapi.Vec3(*object_location)
+
+            # env_idx sets collision group, -1 default for collision_filter
+            object_handle = self.gym.create_actor(
+                env_handle,
+                obj_asset,
+                start_pose,
+                static_obj.name,
+                env_idx,
+                -1,
+                static_obj.segmentation_id,
+            )
+            self.object_handles[env_idx].append(object_handle)
+
+        plant_locations = torch.stack(_plant_locations).unsqueeze(0)
+        if len(self.absolute_plant_locations):
+            self.absolute_plant_locations = torch.cat(
+                (self.absolute_plant_locations, plant_locations)
+            )
+        else:
+            self.absolute_plant_locations = plant_locations
 
     def _create_envs(self):
         """Creates environments:
@@ -133,7 +224,7 @@ class CompatibleLeggedRobot(LeggedRobot, ABC):
 
             # add static objects/ actors to environment
             # function is only
-            self._place_static_objects(i, env_handle)
+            self._place_static_objects(i, env_handle, robot_position=pos)
 
         self.feet_indices = torch.zeros(
             len(feet_names), dtype=torch.long, device=self.device, requires_grad=False
@@ -164,6 +255,18 @@ class CompatibleLeggedRobot(LeggedRobot, ABC):
             self.termination_contact_indices[i] = self.gym.find_actor_rigid_body_handle(
                 self.envs[0], self.actor_handles[0], termination_contact_names[i]
             )
+
+    def _create_ground_plane(self):
+        """Adds a ground plane to the simulation, sets friction and restitution based on the cfg.
+        Additionally, sets segmentation_id to 1 (index of ObjectType="ground")
+        """
+        plane_params = gymapi.PlaneParams()
+        plane_params.normal = gymapi.Vec3(0.0, 0.0, 1.0)
+        plane_params.static_friction = self.cfg.terrain.static_friction
+        plane_params.dynamic_friction = self.cfg.terrain.dynamic_friction
+        plane_params.restitution = self.cfg.terrain.restitution
+        plane_params.segmentation_id = 1  # added for compatibility
+        self.gym.add_ground(self.sim, plane_params)
 
     def _reset_dofs(self, env_ids):
         """Resets DOF position and velocities of selected environmments
@@ -209,12 +312,20 @@ class CompatibleLeggedRobot(LeggedRobot, ABC):
             -0.5, 0.5, (len(env_ids), 6), device=self.device
         )  # [7:10]: lin vel, [10:13]: ang vel
 
-        self.root_states_complete[self.root_state_indices] = self.root_states
+        _root_states = self.root_states.clone()
+        # TODO randomize object positions on every reset and not just during initialization
+        reset_indices = task_utils.get_reset_indices(env_ids, self.num_objects)
+
+        self.root_states_complete[reset_indices] = self.root_states_initialization[
+            reset_indices
+        ]
+        self.root_states_complete[:: self.num_objects] = _root_states
+
         self.gym.set_actor_root_state_tensor_indexed(
             self.sim,
             gymtorch.unwrap_tensor(self.root_states_complete),
-            gymtorch.unwrap_tensor(self.root_state_indices),
-            len(self.root_state_indices),
+            gymtorch.unwrap_tensor(reset_indices),
+            len(reset_indices),
         )
 
     def _push_robots(self):
@@ -223,9 +334,19 @@ class CompatibleLeggedRobot(LeggedRobot, ABC):
         self.root_states[:, 7:9] = torch_rand_float(
             -max_vel, max_vel, (self.num_envs, 2), device=self.device
         )  # lin vel x/y
-        self.root_states_complete[self.root_state_indices] = self.root_states
-        self.gym.set_actor_root_state_tensor(
-            self.sim, gymtorch.unwrap_tensor(self.root_states_complete)
+        self.root_states_complete[:: self.num_objects] = self.root_states
+        indices = torch.arange(
+            0,
+            self.num_envs * self.num_objects,
+            self.num_objects,
+            dtype=torch.int32,
+            device=self.device,
+        )
+        self.gym.set_actor_root_state_tensor_indexed(
+            self.sim,
+            gymtorch.unwrap_tensor(self.root_states_complete),
+            gymtorch.unwrap_tensor(indices),
+            len(indices),
         )
 
     # ----------------------------------------
@@ -241,14 +362,10 @@ class CompatibleLeggedRobot(LeggedRobot, ABC):
 
         # create some wrapper tensors for different slices
         self.root_states_complete = gymtorch.wrap_tensor(actor_root_state)
+        self.root_states_initialization = self.root_states_complete.clone()
         # root_states_complete includes root_states of static objects which is not desired for the following logic
-        self.root_state_indices = torch.arange(
-            0,
-            len(self.root_states_complete),
-            step=getattr(self, "num_static_objects", 0) + 1,
-            dtype=torch.int32,
-        ).to(self.device)
-        self.root_states = self.root_states_complete[self.root_state_indices]
+        self.num_objects = getattr(self, "num_static_objects", 0) + 1
+        self.root_states = self.root_states_complete[:: self.num_objects]
 
         self.dof_state = gymtorch.wrap_tensor(dof_state_tensor)
         self.dof_pos = self.dof_state.view(self.num_envs, self.num_dof, 2)[..., 0]

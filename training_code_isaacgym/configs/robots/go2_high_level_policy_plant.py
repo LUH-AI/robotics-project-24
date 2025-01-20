@@ -1,11 +1,15 @@
+import numpy as np
+
+from isaacgym import gymapi
 from legged_gym.envs.base.legged_robot_config import LeggedRobotCfg
+from .go2_default import GO2DefaultCfg
 
 from ..scenes import BaseSceneCfg
 import os
 
 # this is the GO2RoughCfg copied from unitree_rl_gym repo (do not change, create a new file)
-class GO2HighLevelPlantPolicyCfg(LeggedRobotCfg):
-    name = "go2_high-level-plant-policy"
+class GO2HighLevelPlantPolicyCfg(LeggedRobotCfg):  # GO2DefaultCfg
+    name = "go2_default-high-level-policy_plant"
 
     class low_level_policy:
         path = "./path/to/low_level_policy"  # [TODO: this is not properly set]
@@ -16,9 +20,9 @@ class GO2HighLevelPlantPolicyCfg(LeggedRobotCfg):
     class env:
         num_envs = 32
         num_observations = 6  # [TODO: this is not properly set]
-        num_privileged_obs = None # if not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned otherwise 
+        num_privileged_obs = None # if not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned otherwise
         num_actions = 3  # [TODO: this is not properly set]
-        env_spacing = 3.  # not used with heightfields/trimeshes 
+        env_spacing = 3.  # not used with heightfields/trimeshes
         send_timeouts = True # send time out information to the algorithm
         episode_length_s = 20 # episode length in seconds
         test = False
@@ -73,3 +77,14 @@ class GO2HighLevelPlantPolicyCfg(LeggedRobotCfg):
     # for language server purposes (the selected scene config is added automatically)
     class scene(BaseSceneCfg):
         pass
+
+    # robot camera:
+    class camera:
+        horizontal_fov = 120
+        width = 12
+        height = 1
+        enable_tensors = True
+        vec_from_body_center = gymapi.Vec3(0.34, 0, 0.021)  # Should be closest to reality: (0.34, 0, 0.021)m
+        rot_of_camera = gymapi.Quat.from_axis_angle(
+            gymapi.Vec3(0, 0, 1), np.radians(0)
+        )

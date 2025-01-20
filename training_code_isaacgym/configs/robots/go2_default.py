@@ -1,3 +1,5 @@
+import os
+
 from legged_gym.envs.base.legged_robot_config import LeggedRobotCfg
 
 from ..scenes import BaseSceneCfg
@@ -6,6 +8,11 @@ from ..scenes import BaseSceneCfg
 # this is the GO2RoughCfg copied from unitree_rl_gym repo (do not change, create a new file)
 class GO2DefaultCfg(LeggedRobotCfg):
     name = "go2_default"
+
+    class env(LeggedRobotCfg.env):
+        num_envs = 4096
+        num_observations = 48
+        num_actions = 12
 
     class init_state(LeggedRobotCfg.init_state):
         pos = [0.0, 0.0, 0.42]  # x,y,z [m]
@@ -33,6 +40,7 @@ class GO2DefaultCfg(LeggedRobotCfg):
         action_scale = 0.25
         # decimation: Number of control action updates @ sim DT per policy DT
         decimation = 4
+
 
     class asset(LeggedRobotCfg.asset):
         file = "./training_code_isaacgym/resources/robots/go2/urdf/go2.urdf"
