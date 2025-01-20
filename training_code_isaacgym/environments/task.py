@@ -207,12 +207,12 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         self.high_level_obs_buf = torch.cat((  self.base_lin_vel * self.obs_scales.lin_vel,
                                     self.projected_gravity,
                                     ),dim=-1)
-        print(f"Computed high level observations: {self.high_level_obs_buf.shape}")
+        # print(f"Computed high level observations: {self.high_level_obs_buf.shape}")
         
   
     #dont rename, onPolicyRunner calls this
     def get_observations(self):
-        print(f"get_observations Self.obs.shape {self.obs_buf.shape}")
+        # print(f"get_observations Self.obs.shape {self.obs_buf.shape}")
         return self.high_level_obs_buf
     
     # add custom rewards... here (use your robot_cfg for control)
@@ -225,8 +225,10 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         """
         # Here we get high level actions and need to translate them to low level actions
         #actions are always low_level (dim=12) and high_level_actions are high level (dim=5)
-        print(f"HighLevelPlant.step(actions: {high_level_actions.shape})")
-        self.high_level_actions = high_level_actions
+        # print(f"HighLevelPlant.step(actions: {high_level_actions.shape})")
+        self.high_level_actions = torch.tensor([0, 0, 0.0], dtype=torch.float).repeat(self.high_level_actions.shape[0], 1).to(self.device)
+        # self.high_level_actions = high_level_actions
+
         actions = self.low_level_policy.act_inference(self.obs_buf)
         
         #obs buffer is low level, cannot rename because leggedrobot uses it
@@ -243,16 +245,16 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
        
         # Set the first command (index 0) for each robot to 0.5
         #set fixed command to let the robot rotate
-        print(f"Self.high_level_actions: {self.high_level_actions.shape}")
-        self.high_level_actions = torch.tensor([0, 0, 0.2], dtype=torch.float).repeat(32, 1).to(self.device)
+        # print(f"Self.high_level_actions: {self.high_level_actions.shape}")
+        # self.high_level_actions = torch.tensor([0, 0, 0.2], dtype=torch.float).repeat(self.high_level_actions.shape[0], 1).to(self.device)
         self.obs_buf = torch.cat((  self.base_lin_vel * self.obs_scales.lin_vel,
-                                    self.base_ang_vel  * self.obs_scales.ang_vel,
+                                    self.base_ang_vel * self.obs_scales.ang_vel,
                                     self.projected_gravity,
                                     self.high_level_actions,
                                     (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
                                     self.dof_vel * self.obs_scales.dof_vel,
                                     self.actions
                                     ),dim=-1)
-        print(f"Computed low level observations: {self.obs_buf.shape}")
+        # print(f"Computed low level observations: {self.obs_buf.shape}")
         #print(self.obs_buf[0])
         

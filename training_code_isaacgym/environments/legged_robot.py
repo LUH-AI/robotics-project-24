@@ -67,7 +67,7 @@ class LeggedRobot(BaseTask):
         #clip_actions = self.cfg.normalization.clip_actions
         #self.actions = torch.clip(actions, -clip_actions, clip_actions).to(self.device)
         self.actions = actions
-        print(f"LeggedRobot.step(actions: {self.actions.shape})")
+        # print(f"LeggedRobot.step(actions: {self.actions.shape})")
         
         # step physics and render each frame
         self.render()

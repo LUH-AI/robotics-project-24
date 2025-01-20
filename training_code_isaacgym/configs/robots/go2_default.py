@@ -35,7 +35,8 @@ class GO2DefaultCfg(LeggedRobotCfg):
         decimation = 4
 
     class asset(LeggedRobotCfg.asset):
-        file = "{LEGGED_GYM_ROOT_DIR}/resources/robots/go2/urdf/go2.urdf"
+        file = "./training_code_isaacgym/resources/robots/go2/urdf/go2.urdf"
+        # file = "{LEGGED_GYM_ROOT_DIR}/resources/robots/go2/urdf/go2.urdf"
         name = "go2"
         foot_name = "foot"
         penalize_contacts_on = ["thigh", "calf"]
