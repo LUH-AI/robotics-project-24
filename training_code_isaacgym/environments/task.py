@@ -9,7 +9,6 @@ from ..configs.robots import GO2DefaultCfg
 from ..configs.scenes import BaseSceneCfg
 from ..configs.algorithms import PPODefaultCfg
 from .compatible_legged_robot import CompatibleLeggedRobot
-from rsl_rl.modules import ActorCritic
 from .utils import load_low_level_policy
 from . import utils
 
@@ -159,6 +158,7 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
 
         # Load low-level policy
         self.low_level_policy = load_low_level_policy(cfg, sim_device)
+        self.secondary_decimation = 2  # TODO: reposition/update corresponding code
         # use `self.low_level_policy.act_inference(observations)`
         # or self.low_level_policy.actor(observations) to get an action.
         # See `ActorCritic` in rsl_rl/modules/actor_critic.py
@@ -226,17 +226,17 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
                                     plant_angles,
                                     ), dim=-1)
 
-    #dont rename, onPolicyRunner calls this
+    # dont rename, onPolicyRunner calls this
     def get_observations(self):
         # print(f"get_observations Self.obs.shape {self.obs_buf.shape}")
         return self.obs_buf
 
     # add custom rewards... here (use your robot_cfg for control)
-    def _reward_straight_exploration(self):
+    def _reward_sanity_check(self):
         # Tracking of angular velocity commands (yaw)
         # Provide slight reward for moving ahead
-        lin_vel_error = torch.sum(torch.square(1.0 - self.base_ang_vel[:, :2]), dim=1)
-        return torch.exp(-lin_vel_error/self.cfg.rewards.tracking_sigma)  # TODO: improve reward
+        ang_vel_error = torch.square(1.0 - self.base_ang_vel[:, 2])  # base_ang_vel
+        return torch.exp(-ang_vel_error/self.cfg.rewards.tracking_sigma)  # TODO: improve reward
 
     def _reward_plant_closeness(self):
         # Tracking of angular velocity commands (yaw)
@@ -316,6 +316,7 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         # actions are always low_level (dim=12) and high_level_actions are high level (dim=5)
 
         self.compute_low_level_observations(high_level_actions)
+        self.high_level_actions = high_level_actions
 
         # TODO: replace hardcoded commands with high_level_actions as input
         '''
@@ -330,7 +331,8 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         # End hardcoded high-level
 
         actions = self.low_level_policy.act_inference(self.low_level_obs_buf)
-        obs_buf, privileged_obs_buf, rew_buf, reset_buf, extras = super().step(actions)
+        for _ in range(self.secondary_decimation):  # TODO: use better approach to ameliorate the reward allocation problem
+            obs_buf, privileged_obs_buf, rew_buf, reset_buf, extras = super().step(actions)
         return self.obs_buf, privileged_obs_buf, rew_buf, reset_buf, extras
 
     def get_observations(self):

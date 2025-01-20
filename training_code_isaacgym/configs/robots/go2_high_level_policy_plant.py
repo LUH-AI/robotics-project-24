@@ -30,7 +30,7 @@ class GO2HighLevelPlantPolicyCfg(LeggedRobotCfg):  # GO2DefaultCfg
 
 
     class init_state(LeggedRobotCfg.init_state):
-        pos = [0.0, 0.0, 0.42]  # x,y,z [m]
+        pos = [0.0, 0.0, 0.33]  # x,y,z [m]
         default_joint_angles = {  # = target angles [rad] when action = 0.0
             "FL_hip_joint": 0.1,  # [rad]
             "RL_hip_joint": 0.1,  # [rad]
@@ -69,7 +69,7 @@ class GO2HighLevelPlantPolicyCfg(LeggedRobotCfg):  # GO2DefaultCfg
         soft_dof_pos_limit = 0.9
         base_height_target = 0.25
         # Custom rewards in order to walk to and reach the plant
-        straight_exploration = 10.0
+        sanity_check = 10.
         # plant_closeness = 5.0
         # plant_ahead = 5.0
 
@@ -79,6 +79,7 @@ class GO2HighLevelPlantPolicyCfg(LeggedRobotCfg):  # GO2DefaultCfg
             #  TODO: (left for now to have dummy values)]
             torques = -0.0002
             dof_pos_limits = -10.0
+            sanity_check = 10.
 
     # for language server purposes (the selected scene config is added automatically)
     class scene(BaseSceneCfg):
