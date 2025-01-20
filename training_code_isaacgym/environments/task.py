@@ -214,7 +214,7 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         depth_arrays = torch.tensor([self.gym.get_camera_image(
             self.sim, self.envs[i], self.cameras[i], gymapi.IMAGE_DEPTH
         ) for i in range(len(self.cameras))]) # Has shape (num_envs, 12) TODO: Check if extra dimension somehow sneaked in
-        TODO: Add Distance measure to observation / preprocess it to a good range. Currently: -inf = infinitely far away and -0.1 is 10cm away
+        # TODO: Add Distance measure to observation / preprocess it to a good range. Currently: -inf = infinitely far away and -0.1 is 10cm away
         # raise NotImplementedError
         # Here we get low level observations and need to transform them to high level observations
         # This will probably also need customization of the configuration
