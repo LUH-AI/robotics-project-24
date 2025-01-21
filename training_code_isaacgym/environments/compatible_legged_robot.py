@@ -11,7 +11,7 @@ from isaacgym import gymtorch, gymapi
 
 from legged_gym import LEGGED_GYM_ROOT_DIR
 from legged_gym.utils.isaacgym_utils import get_euler_xyz as get_euler_xyz_in_tensor
-from .legged_robot import LeggedRobot
+from legged_gym.envs.base.legged_robot import LeggedRobot
 
 from . import utils
 
