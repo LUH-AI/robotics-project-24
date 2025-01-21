@@ -63,4 +63,4 @@ class BaseSceneCfg:
     """Static objects that are placed into the scenes. (Do not add objects with random location before fixed objects to the list)"""
     # initial_robot_position: Location = ...
     size: float = 3.0
-    spacing: float = 1.0
+    spacing: float = 3.0

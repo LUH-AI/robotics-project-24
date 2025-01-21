@@ -72,7 +72,7 @@ class GO2HighLevelPlantPolicyCfg(LeggedRobotCfg):  # GO2DefaultCfg
         # sanity_check = 10.
         plant_closeness = 5.0
         plant_ahead = 5.0
-        obstacle_closeness = 5.0
+        obstacle_closeness = 10.0
 
         class scales(LeggedRobotCfg.rewards.scales):
             # only rewards that have a scale will be added (reward is named "_reward_{SCALE_NAME}")
@@ -83,7 +83,7 @@ class GO2HighLevelPlantPolicyCfg(LeggedRobotCfg):  # GO2DefaultCfg
             # sanity_check = 10.
             plant_closeness = 5.0
             plant_ahead = 5.0
-            obstacle_closeness = -5.0
+            obstacle_closeness = -10.0
 
     # for language server purposes (the selected scene config is added automatically)
     class scene(BaseSceneCfg):

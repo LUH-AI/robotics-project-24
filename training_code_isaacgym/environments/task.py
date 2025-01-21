@@ -265,7 +265,9 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
                                          device=self.device).view((len(plants_across_envs), len(plants_across_envs[0])))
         plant_angles = torch.tensor([plant["angle"] for plants in plants_across_envs for plant in plants],
                                          device=self.device).view((len(plants_across_envs), len(plants_across_envs[0])))
-        return torch.mul(torch.exp(-plant_distances.squeeze(1)), plant_probability.squeeze(1))  # TODO: improve reward
+        combined_reward = torch.mul(torch.exp(-plant_distances.squeeze(1)), plant_probability.squeeze(1))
+        combined_reward += 10 * torch.mul(torch.exp(-plant_distances.squeeze(1)*10.), plant_probability.squeeze(1))
+        return combined_reward  # TODO: improve reward
 
     def _reward_obstacle_closeness(self):
         # Tracking of angular velocity commands (yaw)
@@ -278,7 +280,7 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
                                          device=self.device).view((len(plants_across_envs), len(plants_across_envs[0])))
         obstacle_angles = torch.tensor([plant["angle"] for plants in plants_across_envs for plant in plants],
                                          device=self.device).view((len(plants_across_envs), len(plants_across_envs[0])))
-        return -torch.exp(-obstacle_distances.squeeze(1)*5.0)  # TODO: improve reward
+        return torch.exp(-obstacle_distances.squeeze(1)*10.0)  # TODO: improve reward
 
     def _reward_plant_ahead(self):
         # Tracking of angular velocity commands (yaw)
@@ -291,7 +293,7 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
                                          device=self.device).view((len(plants_across_envs), len(plants_across_envs[0])))
         plant_angles = torch.tensor([plant["angle"] for plants in plants_across_envs for plant in plants],
                                          device=self.device).view((len(plants_across_envs), len(plants_across_envs[0])))
-        return torch.mul(torch.exp(-plant_angles.squeeze(1).abs()), plant_probability.squeeze(1))  # TODO: improve reward
+        return torch.mul(torch.exp(-plant_angles.squeeze(1)*0.1), plant_probability.squeeze(1))  # TODO: improve reward
 
     def _detect_objects(self):
         """Detects objects in the environment and classifies them into obstacles and plants/targets.
