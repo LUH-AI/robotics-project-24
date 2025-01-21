@@ -1,9 +1,11 @@
 from typing import Any, Callable
 
 import torch
-from isaacgym import gymapi
+from isaacgym import gymtorch, gymapi
+from isaacgym.torch_utils import *
 
 from legged_gym.utils.task_registry import task_registry
+from legged_gym.utils.isaacgym_utils import get_euler_xyz as get_euler_xyz_in_tensor
 
 from ..configs.robots import GO2DefaultCfg
 from ..configs.scenes import BaseSceneCfg
