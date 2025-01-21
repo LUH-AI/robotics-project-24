@@ -25,6 +25,7 @@ scenes = {
     "empty_room_5x5": scene_configs.EmptyRoom5x5Cfg(),
     "plant_environment": scene_configs.PlantEnvironmentCfg(),
     "single_plant": scene_configs.SinglePlantCfg(),
+    "single_plant_with_obstacles": scene_configs.SinglePlantWithObstaclesCfg(),
 }
 algorithms = {
     "ppo_default": alg_configs.PPODefaultCfg(),

@@ -46,6 +46,7 @@ class CompatibleLeggedRobot(LeggedRobot, ABC):
             static_obj.to(self.device)
 
         _plant_locations = []
+        _obstacle_locations = []
         other_object_locations = []
         other_object_sizes = []
         for object_idx, static_obj in enumerate(self.cfg.scene.static_objects):
@@ -93,6 +94,9 @@ class CompatibleLeggedRobot(LeggedRobot, ABC):
             other_object_sizes.append(static_obj.size)
             if static_obj.type == "flower_pot":
                 _plant_locations.append(object_location)
+            if static_obj.type == "obstacle":
+                _obstacle_locations.append(object_location)
+
 
             start_pose.p = gymapi.Vec3(*object_location)
 
@@ -115,6 +119,14 @@ class CompatibleLeggedRobot(LeggedRobot, ABC):
             )
         else:
             self.absolute_plant_locations = plant_locations
+
+        obstacle_locations = torch.stack(_obstacle_locations).unsqueeze(0)
+        if len(self.absolute_obstacle_locations):
+            self.absolute_obstacle_locations = torch.cat(
+                (self.absolute_obstacle_locations, obstacle_locations)
+            )
+        else:
+            self.absolute_obstacle_locations = obstacle_locations
 
     def _create_envs(self):
         """Creates environments:

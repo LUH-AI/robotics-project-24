@@ -1,45 +1,27 @@
-import random
 from pathlib import Path
+
 from . import BaseSceneCfg, StaticObject
 
-asset_path = Path(__file__).parents[2] / "assets/scenes/plant_environment"
-urdf_path = asset_path / "urdf" / "walls_10x10.urdf"
+
+asset_path = Path(__file__).parents[2] / "assets/scenes/plant_environment_with_obstacles"
+wall_path = asset_path / "urdf" / "ceiled_walls_5x5x3.urdf"
 plant_path = asset_path / "urdf" / "plant1.urdf"
 chair_path = asset_path / "urdf" / "chair1.urdf"
 
-
-class PlantEnvironmentCfg(BaseSceneCfg):
-    name = "plant_environment"
-    size: float = 6.0
-
+class SinglePlantWithObstaclesCfg(BaseSceneCfg):
+    name = "single_plant"
     static_objects = [
         StaticObject(
             "walls",
             "wall",
-            urdf_path,
+            wall_path,
         ),
         StaticObject(
             "flower",
             "flower_pot",
             plant_path,
             init_location=(0.0, 0.0, 0.2),
-            max_random_loc_offset=(4.8, 4.8, 0),
-            size=(0.125, 0.125, 0.3),
-        ),
-        StaticObject(
-            "flower",
-            "flower_pot",
-            plant_path,
-            init_location=(0.0, 0.0, 0.2),
-            max_random_loc_offset=(4.8, 4.8, 0),
-            size=(0.125, 0.125, 0.3),
-        ),
-        StaticObject(
-            "flower",
-            "flower_pot",
-            plant_path,
-            init_location=(0.0, 0.0, 0.2),
-            max_random_loc_offset=(4.8, 4.8, 0),
+            max_random_loc_offset=(2., 2., 0),
             size=(0.125, 0.125, 0.3),
         ),
         StaticObject(
@@ -47,7 +29,7 @@ class PlantEnvironmentCfg(BaseSceneCfg):
             "obstacle",
             chair_path,
             init_location=(0.0, 0.0, 0.2),
-            max_random_loc_offset=(4.8, 4.8, 0),
+            max_random_loc_offset=(1.6, 1.6, 0),
             size=(0.5, 0.5, 0.5),
         ),
         StaticObject(
@@ -55,7 +37,7 @@ class PlantEnvironmentCfg(BaseSceneCfg):
             "obstacle",
             chair_path,
             init_location=(0.0, 0.0, 0.2),
-            max_random_loc_offset=(4.8, 4.8, 0),
+            max_random_loc_offset=(1.6, 1.6, 0),
             size=(0.5, 0.5, 0.5),
         ),
         StaticObject(
@@ -63,7 +45,8 @@ class PlantEnvironmentCfg(BaseSceneCfg):
             "obstacle",
             chair_path,
             init_location=(0.0, 0.0, 0.2),
-            max_random_loc_offset=(4.8, 4.8, 0),
+            max_random_loc_offset=(1.6, 1.6, 0),
             size=(0.5, 0.5, 0.5),
         ),
     ]
+    size = 5.0
