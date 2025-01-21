@@ -227,7 +227,7 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
             self.sim, self.envs[i], self.cameras[i], gymapi.IMAGE_DEPTH
         ) for i in
             range(len(self.cameras))], device=self.device).squeeze(1)
-        print("depth_arrays", depth_information.shape)
+        # print("depth_arrays", depth_information.shape)
         # print(depth_information[0].cpu().tolist())
 
         self.obs_buf = torch.cat((self.base_lin_vel * self.obs_scales.lin_vel,

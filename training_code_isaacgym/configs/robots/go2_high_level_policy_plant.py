@@ -25,7 +25,7 @@ class GO2HighLevelPlantPolicyCfg(LeggedRobotCfg):  # GO2DefaultCfg
         num_actions = 3  # [TODO: this is not properly set]
         env_spacing = 3.  # not used with heightfields/trimeshes
         send_timeouts = True  # send time out information to the algorithm
-        episode_length_s = 20  # episode length in seconds
+        episode_length_s = 8  # episode length in seconds
         test = False
 
 
