@@ -280,7 +280,9 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
                                          device=self.device).view((len(plants_across_envs), len(plants_across_envs[0])))
         obstacle_angles = torch.tensor([plant["angle"] for plants in plants_across_envs for plant in plants],
                                          device=self.device).view((len(plants_across_envs), len(plants_across_envs[0])))
-        return torch.exp(-obstacle_distances.squeeze(1)*10.0)  # TODO: improve reward
+
+        return torch.mul((obstacle_distances.squeeze(1) < 1.5).int().float(), torch.exp(-obstacle_distances.squeeze(1)))
+        # TODO: improve reward
 
     def _reward_plant_ahead(self):
         # Tracking of angular velocity commands (yaw)

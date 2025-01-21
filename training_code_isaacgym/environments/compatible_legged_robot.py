@@ -70,7 +70,7 @@ class CompatibleLeggedRobot(LeggedRobot, ABC):
                 static_obj.max_random_loc_offset,
             )
             # does not detect collisions of non-random objects (e.g. walls)
-            while i < 25 and static_obj.max_random_loc_offset.any():
+            while i < 100 and static_obj.max_random_loc_offset.any():
                 object_location = utils.calculate_random_location(
                     location_offset,
                     static_obj.init_location,
@@ -85,7 +85,7 @@ class CompatibleLeggedRobot(LeggedRobot, ABC):
                 ):
                     break
                 i += 1
-            if i == 25:
+            if i == 100:
                 warnings.warn(
                     f"Static object could not be placed randomly without collisions ({i} tries). This can cause problems"
                 )
