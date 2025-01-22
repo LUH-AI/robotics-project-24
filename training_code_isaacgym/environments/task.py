@@ -188,6 +188,7 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         self.camera_props.height = camera.height
         self.camera_props.enable_tensors = camera.enable_tensors
         self.camera_props.use_collision_geometry = True
+        self.half_image_idx = camera.height // 2
 
     def _init_buffers(self):
         """ Initialize torch tensors which will contain simulation states and processed quantities
@@ -362,20 +363,26 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         plant_angles = torch.tensor([plant["angle"] for plants in plants_across_envs for plant in plants],
                                     device=self.device).view((len(plants_across_envs), len(plants_across_envs[0])))
 
-        # Distance sensors
-        depth_information = - torch.tensor([self.gym.get_camera_image(
-            self.sim, self.envs[i], self.cameras[i], gymapi.IMAGE_DEPTH
-        ) for i in
-            range(len(self.cameras))], device=self.device).squeeze(1)
-        # print("depth_arrays", depth_information.shape)
-        # print(depth_information[0].cpu().tolist())
-
+        # Distance sensors WITH ACCESS AND END ACCESS IT actually gets GPU tensors
+        self.gym.start_access_image_tensors(self.sim)
+        depth_information = -torch.stack([
+            gymtorch.wrap_tensor(
+                self.gym.get_camera_image_gpu_tensor(
+                    self.sim, self.envs[i], self.cameras[i], gymapi.IMAGE_DEPTH
+                )
+            ) for i in range(len(self.cameras))
+        ])
+        self.gym.end_access_image_tensors(self.sim)
+        # USE DEPTH INFORMATION TO CALCULATE UPPER AND LOWER IMAGE MIN VALUE
+        upper_image_min = depth_information[:, :self.half_image_idx, :].min(dim=1).values
+        lower_image_min = depth_information[:, self.half_image_idx:, :].min(dim=1).values
+        observable_depth_information = torch.cat((upper_image_min, lower_image_min), dim=1)
         self.obs_buf = torch.cat((self.base_lin_vel * self.obs_scales.lin_vel,
                                   self.projected_gravity,
                                   plant_probability,
                                   torch.mul(plant_distances, plant_probability),
                                   torch.mul(plant_angles, plant_probability),
-                                  depth_information,
+                                  observable_depth_information,
                                   ), dim=-1)
 
     # dont rename, onPolicyRunner calls this
