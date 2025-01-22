@@ -19,6 +19,7 @@ from unitree_sdk2py.go2.sport.sport_client import (
     SportClient,
 )
 from unitree_sdk2py.go2.video.video_client import VideoClient
+from unitree_sdk2py.idl.sensor_msgs.msg.dds_ import PointCloud2_
 from unitree_sdk2py.idl.unitree_go.msg.dds_ import LowState_
 
 # Konfiguration
@@ -49,6 +50,37 @@ def low_state_message_handler(self, msg: LowState_):
     print("FR_0 motor state: ", msg.motor_state[go2.LegID["FR_0"]])
     print("IMU state: ", msg.imu_state)
     print("Battery state: voltage: ", msg.power_v, "current: ", msg.power_a)
+
+
+
+def pointcloud_to_image(pointcloud_msg: PointCloud2_):
+    # Dimensionen und Daten extrahieren
+    width = pointcloud_msg.width
+    point_step = pointcloud_msg.point_step
+    data = np.array(pointcloud_msg.data, dtype=np.uint8)
+    
+    # Überprüfen, ob die Daten konsistent sind
+    if len(data) % (width * point_step) != 0:
+        raise ValueError("Datenlänge ist nicht mit der erwarteten Bildgröße kompatibel.")
+    
+    # Beispiel: Nur RGB-Daten extrahieren (angenommen, jeder Punkt hat 3 Bytes RGB)
+    if point_step < 3:
+        raise ValueError("Zu wenig Daten pro Punkt, um ein RGB-Bild zu erzeugen.")
+    
+    rgb_data = data[:width * point_step].reshape((width, point_step))
+    # Extrahiere nur die ersten 3 Kanäle (RGB)
+    image = rgb_data[:, :3].reshape((1, width, 3))  # Höhe ist 1
+    
+    # Optionale Umwandlung in 8-Bit-Format für Anzeige
+    image = np.squeeze(image, axis=0)  # Höhe entfernen, da sie 1 ist
+    return image
+
+def lidar_cloud_message_handler(msg: PointCloud2_):
+    """Get the point cloud states from the robot."""
+    print("Width",msg.width,"Height", msg.height,"Len",len(msg.data))
+    image = pointcloud_to_image(msg)
+    cv2.imshow("Lidar", image)
+
 
 def calculate_distance(pot_width_pixels):
     """Berechnet die Entfernung anhand der Breite des Topfes in Pixeln."""
@@ -144,6 +176,9 @@ def main():  # noqa: D103
     sport_client.Init()
 
     code, data = client.GetImageSample()
+
+    lidar_subscriber = ChannelSubscriber("rt/utlidar/cloud", PointCloud2_)
+    lidar_subscriber.Init(lidar_cloud_message_handler, 10)
 
     #lowstate_subscriber = ChannelSubscriber("rt/lowstate", LowState_)
     #lowstate_subscriber.Init(low_state_message_handler, 10)
