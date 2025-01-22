@@ -25,3 +25,6 @@ It is recommended you use the AI partition of the LUIS cluster for training. Ple
 ## Deployment
 There are multiple deployment options for ROS, but the simplest one might be using the [recommended IsaacLab workflow](https://developer.nvidia.com/blog/closing-the-sim-to-real-gap-training-spot-quadruped-locomotion-with-nvidia-isaac-lab/).
 
+## SSH
+ssh unitree@192.168.123.18 #Its always the same IP-Adress. It doesnt matter whats listed in ifconfig
+password: 123
