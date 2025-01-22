@@ -44,9 +44,8 @@ def sigint_handler(signal, frame):
     #Programm abbrechen, sonst läuft loop weiter
     sys.exit(0)
 
-def low_state_message_handler(self, msg: LowState_):
+def low_state_message_handler(msg: LowState_):
     """Get the low level states from the robot."""
-    self.low_state = msg
     print("FR_0 motor state: ", msg.motor_state[go2.LegID["FR_0"]])
     print("IMU state: ", msg.imu_state)
     print("Battery state: voltage: ", msg.power_v, "current: ", msg.power_a)
@@ -177,8 +176,8 @@ def main():  # noqa: D103
 
     code, data = client.GetImageSample()
 
-    lidar_subscriber = ChannelSubscriber("rt/utlidar/cloud", PointCloud2_)
-    lidar_subscriber.Init(lidar_cloud_message_handler, 10)
+    #lidar_subscriber = ChannelSubscriber("rt/utlidar/cloud", PointCloud2_)
+    #lidar_subscriber.Init(lidar_cloud_message_handler, 10)
 
     #lowstate_subscriber = ChannelSubscriber("rt/lowstate", LowState_)
     #lowstate_subscriber.Init(low_state_message_handler, 10)
@@ -231,25 +230,30 @@ def main():  # noqa: D103
             # Lokale Karte aktualisieren
             update_local_map(robot_position, plants, pot_positions)
             if closest_pot[1] is None:
-                sport_client.Move(0,0,0)# Hier ggf den Roboter drehen lassen bis er was erkennt
-                print("NIX ERKANNT")
+                #sport_client.Move(0,0,0)# Hier ggf den Roboter drehen lassen bis er was erkennt
+                code = obstacle_avoid_client.Move(0,0,0)
+                print("NIX ERKANNT",code)
             else:
                 print("Distance: ",closest_pot[0],"ANGLE: ",closest_pot[1])
                 if abs (closest_pot[1]) < 20:
-                    if closest_pot[0] > 100: #cm
+                    if closest_pot[0] > 60: #cm
                         #sport_client.Move(1.0,0,0)
-                        print("MOVE FORWARD")
+                        code = obstacle_avoid_client.Move(1.0,0,0)
+                        print("MOVE FORWARD",code)
                     else: #Hier ggf aufs Lidar wechseln
-                        sport_client.Move(0,0,0)
-                        print("STOP BECAUSE TOO CLOSE")
+                        #sport_client.Move(0,0,0)
+                        code = obstacle_avoid_client.Move(0,0,0)
+                        print("STOP BECAUSE TOO CLOSE",code)
                 else:
                     # Hier ggf links und rechts vertauscht
                     if closest_pot[1] < 0:#Hier ggf den angle an steering mappen
-                        sport_client.Move(0,0,-1.0)
-                        print("TURN ROBOT RIGHT")
+                        #sport_client.Move(0,0,-1.0)
+                        code = obstacle_avoid_client.Move(0,0,-1.0)
+                        print("TURN ROBOT RIGHT",code)
                     else:
-                        sport_client.Move(0,0,1.0)
-                        print("TURN ROBOT LEFT")
+                        #sport_client.Move(0,0,1.0)
+                        code = obstacle_avoid_client.Move(0,0,1.0)
+                        print("TURN ROBOT LEFT",code)
             # Bild anzeigen
             cv2.imshow("Erkannte_Objekte", image)
 
