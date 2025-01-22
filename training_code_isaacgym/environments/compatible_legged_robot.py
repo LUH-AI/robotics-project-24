@@ -11,7 +11,7 @@ from isaacgym import gymtorch, gymapi
 
 from legged_gym import LEGGED_GYM_ROOT_DIR
 from legged_gym.utils.isaacgym_utils import get_euler_xyz as get_euler_xyz_in_tensor
-from .legged_robot import LeggedRobot
+from legged_gym.envs.base.legged_robot import LeggedRobot
 
 from . import utils
 
@@ -401,36 +401,27 @@ class CompatibleLeggedRobot(LeggedRobot, ABC):
         self.forward_vec = to_torch([1.0, 0.0, 0.0], device=self.device).repeat(
             (self.num_envs, 1)
         )
-        #self.obs is for low level
-        self.obs_buf = torch.zeros(self.num_envs, self.cfg.low_level_policy.num_observations, device=self.device, dtype=torch.float) 
         self.torques = torch.zeros(
             self.num_envs,
-            self.cfg.low_level_policy.num_actions,
+            self.num_actions,
             dtype=torch.float,
             device=self.device,
             requires_grad=False,
         )
         self.p_gains = torch.zeros(
-            self.cfg.low_level_policy.num_actions, dtype=torch.float, device=self.device, requires_grad=False
+            self.num_actions, dtype=torch.float, device=self.device, requires_grad=False
         )
         self.d_gains = torch.zeros(
-            self.cfg.low_level_policy.num_actions, dtype=torch.float, device=self.device, requires_grad=False
+            self.num_actions, dtype=torch.float, device=self.device, requires_grad=False
         )
         self.actions = torch.zeros(
             self.num_envs,
-            self.cfg.low_level_policy.num_actions,
+            self.num_actions,
             dtype=torch.float,
             device=self.device,
             requires_grad=False,
         )
         self.last_actions = torch.zeros(
-            self.num_envs,
-            self.cfg.low_level_policy.num_actions,
-            dtype=torch.float,
-            device=self.device,
-            requires_grad=False,
-        )
-        self.high_level_actions = torch.zeros(
             self.num_envs,
             self.num_actions,
             dtype=torch.float,
