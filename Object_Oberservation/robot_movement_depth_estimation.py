@@ -1,20 +1,25 @@
 #type: ignore
 
 import math
-import os, sys
+import os
 import signal
+import sys
+import time
+
 import cv2
 import numpy as np
 import torch
+import unitree_legged_const as go2
 from ultralytics import YOLO
 from unitree_sdk2py.core.channel import ChannelFactoryInitialize, ChannelSubscriber
+from unitree_sdk2py.go2.obstacles_avoid.obstacles_avoid_client import (
+    ObstaclesAvoidClient,
+)
 from unitree_sdk2py.go2.sport.sport_client import (
     SportClient,
 )
-from unitree_sdk2py.idl.unitree_go.msg.dds_ import LowState_
-import unitree_legged_const as go2
-
 from unitree_sdk2py.go2.video.video_client import VideoClient
+from unitree_sdk2py.idl.unitree_go.msg.dds_ import LowState_
 
 # Konfiguration
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -33,11 +38,13 @@ map_size = 1000
 
 # Handler-Methode: Signal für KeyboardInterrupt abfangen
 def sigint_handler(signal, frame):
-    print ('--> KeyboardInterrupt abgefangen')
-#Programm abbrechen, sonst läuft loop weiter
+    """Keyboard Interrupt function."""
+    print ("--> KeyboardInterrupt abgefangen")
+    #Programm abbrechen, sonst läuft loop weiter
     sys.exit(0)
 
-def LowStateMessageHandler(self, msg: LowState_):
+def low_state_message_handler(self, msg: LowState_):
+    """Get the low level states from the robot."""
     self.low_state = msg
     print("FR_0 motor state: ", msg.motor_state[go2.LegID["FR_0"]])
     print("IMU state: ", msg.imu_state)
@@ -116,6 +123,17 @@ def main():  # noqa: D103
         ChannelFactoryInitialize(0)
     """
     #urdf_loader = URDFLoader()
+    obstacle_avoid_client = ObstaclesAvoidClient()
+    obstacle_avoid_client.SetTimeout(3.0)
+    obstacle_avoid_client.Init()
+
+    while not obstacle_avoid_client.SwitchGet()[1]:
+        obstacle_avoid_client.SwitchSet(True)
+        time.sleep(0.1)
+
+    print("obstacles avoid switch on")
+    obstacle_avoid_client.UseRemoteCommandFromApi(True)
+
 
     client = VideoClient()  # Create a video client
     client.SetTimeout(3.0)
@@ -128,7 +146,7 @@ def main():  # noqa: D103
     code, data = client.GetImageSample()
 
     #lowstate_subscriber = ChannelSubscriber("rt/lowstate", LowState_)
-    #lowstate_subscriber.Init(LowStateMessageHandler, 10)
+    #lowstate_subscriber.Init(low_state_message_handler, 10)
 
 
     # Alle Bilder im Ordner durchlaufen
