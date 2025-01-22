@@ -25,7 +25,7 @@ class CompatibleLeggedRobot(LeggedRobot, ABC):
     """This class should not be called directly"""
 
     def _place_static_objects(
-        self, env_idx: int, env_handle: Any, robot_position: torch.Tensor
+            self, env_idx: int, env_handle: Any, robot_position: torch.Tensor
     ):
         """Places static objects like walls into the provided environment
         It is called in the environment creation loop in super()._create_envs()
@@ -77,11 +77,11 @@ class CompatibleLeggedRobot(LeggedRobot, ABC):
                     static_obj.max_random_loc_offset,
                 )
                 if utils.validate_location(
-                    static_obj,
-                    object_location,
-                    robot_position,
-                    other_object_locations,
-                    other_object_sizes,
+                        static_obj,
+                        object_location,
+                        robot_position,
+                        other_object_locations,
+                        other_object_sizes,
                 ):
                     break
                 i += 1
@@ -96,7 +96,6 @@ class CompatibleLeggedRobot(LeggedRobot, ABC):
                 _plant_locations.append(object_location)
             if static_obj.type == "obstacle":
                 _obstacle_locations.append(object_location)
-
 
             start_pose.p = gymapi.Vec3(*object_location)
 
@@ -120,13 +119,14 @@ class CompatibleLeggedRobot(LeggedRobot, ABC):
         else:
             self.absolute_plant_locations = plant_locations
 
-        obstacle_locations = torch.stack(_obstacle_locations).unsqueeze(0)
-        if len(self.absolute_obstacle_locations):
-            self.absolute_obstacle_locations = torch.cat(
-                (self.absolute_obstacle_locations, obstacle_locations)
-            )
-        else:
-            self.absolute_obstacle_locations = obstacle_locations
+        if len(_obstacle_locations)>0:
+            obstacle_locations = torch.stack(_obstacle_locations).unsqueeze(0)
+            if len(self.absolute_obstacle_locations):
+                self.absolute_obstacle_locations = torch.cat(
+                    (self.absolute_obstacle_locations, obstacle_locations)
+                )
+            else:
+                self.absolute_obstacle_locations = obstacle_locations
 
     def _create_envs(self):
         """Creates environments:
@@ -180,10 +180,10 @@ class CompatibleLeggedRobot(LeggedRobot, ABC):
             termination_contact_names.extend([s for s in body_names if name in s])
 
         base_init_state_list = (
-            self.cfg.init_state.pos
-            + self.cfg.init_state.rot
-            + self.cfg.init_state.lin_vel
-            + self.cfg.init_state.ang_vel
+                self.cfg.init_state.pos
+                + self.cfg.init_state.rot
+                + self.cfg.init_state.lin_vel
+                + self.cfg.init_state.ang_vel
         )
         self.base_init_state = to_torch(
             base_init_state_list, device=self.device, requires_grad=False
@@ -388,8 +388,8 @@ class CompatibleLeggedRobot(LeggedRobot, ABC):
         self.contact_forces = gymtorch.wrap_tensor(net_contact_forces).view(
             self.num_envs, -1, 3
         )[
-            :, : self.num_bodies
-        ]  # shape: num_envs, num_bodies, xyz axis
+                              :, : self.num_bodies
+                              ]  # shape: num_envs, num_bodies, xyz axis
 
         # initialize some data used later on
         self.common_step_counter = 0

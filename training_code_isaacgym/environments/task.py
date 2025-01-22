@@ -218,8 +218,8 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         self.contact_forces = gymtorch.wrap_tensor(net_contact_forces).view(
             self.num_envs, -1, 3
         )[
-            :, : self.num_bodies
-        ]  # shape: num_envs, num_bodies, xyz axis
+                              :, : self.num_bodies
+                              ]  # shape: num_envs, num_bodies, xyz axis
 
         # initialize some data used later on
         self.common_step_counter = 0
@@ -231,8 +231,9 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         self.forward_vec = to_torch([1.0, 0.0, 0.0], device=self.device).repeat(
             (self.num_envs, 1)
         )
-        #self.obs is for low level
-        self.obs_buf = torch.zeros(self.num_envs, self.cfg.low_level_policy.num_observations, device=self.device, dtype=torch.float)
+        # self.obs is for low level
+        self.obs_buf = torch.zeros(self.num_envs, self.cfg.low_level_policy.num_observations, device=self.device,
+                                   dtype=torch.float)
         self.torques = torch.zeros(
             self.num_envs,
             self.cfg.low_level_policy.num_actions,
@@ -357,9 +358,9 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         plant_probability = torch.tensor([plant["probability"] for plants in plants_across_envs for plant in plants],
                                          device=self.device).view((len(plants_across_envs), len(plants_across_envs[0])))
         plant_distances = torch.tensor([plant["distance"] for plants in plants_across_envs for plant in plants],
-                                         device=self.device).view((len(plants_across_envs), len(plants_across_envs[0])))
+                                       device=self.device).view((len(plants_across_envs), len(plants_across_envs[0])))
         plant_angles = torch.tensor([plant["angle"] for plants in plants_across_envs for plant in plants],
-                                         device=self.device).view((len(plants_across_envs), len(plants_across_envs[0])))
+                                    device=self.device).view((len(plants_across_envs), len(plants_across_envs[0])))
 
         # Distance sensors
         depth_information = - torch.tensor([self.gym.get_camera_image(
@@ -401,27 +402,36 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         plant_probability = torch.tensor([plant["probability"] for plants in plants_across_envs for plant in plants],
                                          device=self.device).view((len(plants_across_envs), len(plants_across_envs[0])))
         plant_distances = torch.tensor([plant["distance"] for plants in plants_across_envs for plant in plants],
-                                         device=self.device).view((len(plants_across_envs), len(plants_across_envs[0])))
+                                       device=self.device).view((len(plants_across_envs), len(plants_across_envs[0])))
         plant_angles = torch.tensor([plant["angle"] for plants in plants_across_envs for plant in plants],
-                                         device=self.device).view((len(plants_across_envs), len(plants_across_envs[0])))
+                                    device=self.device).view((len(plants_across_envs), len(plants_across_envs[0])))
         combined_reward = torch.mul(torch.exp(-plant_distances.squeeze(1)), plant_probability.squeeze(1))
-        combined_reward += 10 * torch.mul(torch.exp(-plant_distances.squeeze(1)*10.), plant_probability.squeeze(1))
+        combined_reward += 10 * torch.mul(torch.exp(-plant_distances.squeeze(1) * 10.), plant_probability.squeeze(1))
         return combined_reward  # TODO: improve reward
 
     def _reward_obstacle_closeness(self):
         # Tracking of angular velocity commands (yaw)
         plants_across_envs = [obj["obstacles"] for obj in self.detected_objects]
-        # print(
-        #     ("plants_across_envs-", len(plants_across_envs), len(plants_across_envs[0]), len(plants_across_envs[0][0])))
-        obstacle_probability = torch.tensor([plant["probability"] for plants in plants_across_envs for plant in plants],
-                                         device=self.device).view((len(plants_across_envs), len(plants_across_envs[0])))
-        obstacle_distances = torch.tensor([plant["distance"] for plants in plants_across_envs for plant in plants],
-                                         device=self.device).view((len(plants_across_envs), len(plants_across_envs[0])))
-        obstacle_angles = torch.tensor([plant["angle"] for plants in plants_across_envs for plant in plants],
-                                         device=self.device).view((len(plants_across_envs), len(plants_across_envs[0])))
+        if len(plants_across_envs) > 0:
+            print("......")
+            # print(
+            #     ("plants_across_envs-", len(plants_across_envs), len(plants_across_envs[0]), len(plants_across_envs[0][0])))
+            obstacle_probability = torch.tensor(
+                [plant["probability"] for plants in plants_across_envs for plant in plants],
+                device=self.device).view((len(plants_across_envs), len(plants_across_envs[0])))
+            obstacle_distances = torch.tensor([plant["distance"] for plants in plants_across_envs for plant in plants],
+                                              device=self.device).view(
+                (len(plants_across_envs), len(plants_across_envs[0])))
+            obstacle_angles = torch.tensor([plant["angle"] for plants in plants_across_envs for plant in plants],
+                                           device=self.device).view(
+                (len(plants_across_envs), len(plants_across_envs[0])))
 
-        return torch.mul((obstacle_distances.squeeze(1) < 1.5).int().float(), torch.exp(-obstacle_distances.squeeze(1)))
-        # TODO: improve reward
+            return torch.mul((obstacle_distances.squeeze(1) < 1.5).int().float(),
+                             torch.exp(-obstacle_distances.squeeze(1)))
+            # TODO: improve reward
+        else:
+            print("---", torch.zeros_like(self.base_ang_vel[:, 2]).to(self.device).shape)
+            return torch.zeros_like(self.base_ang_vel[:, 2]).to(self.device)
 
     def _reward_plant_ahead(self):
         # Tracking of angular velocity commands (yaw)
@@ -431,10 +441,11 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         plant_probability = torch.tensor([plant["probability"] for plants in plants_across_envs for plant in plants],
                                          device=self.device).view((len(plants_across_envs), len(plants_across_envs[0])))
         plant_distances = torch.tensor([plant["distance"] for plants in plants_across_envs for plant in plants],
-                                         device=self.device).view((len(plants_across_envs), len(plants_across_envs[0])))
+                                       device=self.device).view((len(plants_across_envs), len(plants_across_envs[0])))
         plant_angles = torch.tensor([plant["angle"] for plants in plants_across_envs for plant in plants],
-                                         device=self.device).view((len(plants_across_envs), len(plants_across_envs[0])))
-        return torch.mul(torch.exp(-plant_angles.squeeze(1)*0.1), plant_probability.squeeze(1))  # TODO: improve reward
+                                    device=self.device).view((len(plants_across_envs), len(plants_across_envs[0])))
+        return torch.mul(torch.exp(-plant_angles.squeeze(1) * 0.1),
+                         plant_probability.squeeze(1))  # TODO: improve reward
 
     def _detect_objects(self):
         """Detects objects in the environment and classifies them into obstacles and plants/targets.
@@ -480,32 +491,32 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
                         "distance": distance,
                         "angle": angle
                     })
+            if len(self.absolute_obstacle_locations) > 0:
+                for obstacle_location in self.absolute_obstacle_locations[env_idx]:
+                    # Compute distance from robot to plant
+                    distance = torch.norm(obstacle_location - robot_position)
+                    # Compute angle from robot to plant
+                    relative_position = obstacle_location - robot_position
+                    angle = torch.atan2(relative_position[1], relative_position[0]) - robot_orientation
+                    angle = torch.remainder(angle + torch.pi, 2 * torch.pi) - torch.pi  # Normalize angle to [-pi, pi]
+                    # TODO: use a better way of linking distance to a reduced prediction probability
+                    probability = torch.exp(-distance)
 
-            for obstacle_location in self.absolute_obstacle_locations[env_idx]:
-                # Compute distance from robot to plant
-                distance = torch.norm(obstacle_location - robot_position)
-                # Compute angle from robot to plant
-                relative_position = obstacle_location - robot_position
-                angle = torch.atan2(relative_position[1], relative_position[0]) - robot_orientation
-                angle = torch.remainder(angle + torch.pi, 2 * torch.pi) - torch.pi  # Normalize angle to [-pi, pi]
-                # TODO: use a better way of linking distance to a reduced prediction probability
-                probability = torch.exp(-distance)
-
-                # Check if the plant is within the robot's field of view (FOV)
-                if torch.abs(angle) <= fov_angle:
-                    obstacles.append({
-                        "location": obstacle_location,
-                        "probability": probability,
-                        "distance": distance,
-                        "angle": angle
-                    })
-                else:
-                    obstacles.append({
-                        "location": obstacle_location,
-                        "probability": 0,
-                        "distance": distance,
-                        "angle": angle
-                    })
+                    # Check if the plant is within the robot's field of view (FOV)
+                    if torch.abs(angle) <= fov_angle:
+                        obstacles.append({
+                            "location": obstacle_location,
+                            "probability": probability,
+                            "distance": distance,
+                            "angle": angle
+                        })
+                    else:
+                        obstacles.append({
+                            "location": obstacle_location,
+                            "probability": 0,
+                            "distance": distance,
+                            "angle": angle
+                        })
             # print("plants...", len(plants))
             # print("sorted", sorted(plants, key=lambda p: p["probability"], reverse=True))
             detected_objects.append({
@@ -517,12 +528,7 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         # In case the environment would not have plants, zero valued plants are predicted
         if self.absolute_plant_locations.shape[0] == 0:
             detected_objects = []
-            obstacles = [{
-                "location": (0, 0, 0),
-                "probability": 0,
-                "distance": 0,
-                "angle": 0
-            }]
+            obstacles = []
             plants = [{
                 "location": (0, 0, 0),
                 "probability": 0,
