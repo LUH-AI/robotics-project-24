@@ -20,7 +20,7 @@ class GO2HighLevelPlantPolicyCfg(LeggedRobotCfg):  # GO2DefaultCfg
     # Overwrite env from LeggedrobotCfg
     class env:
         num_envs = 32
-        num_observations = 9 + 12  # [TODO: this is not properly set]
+        num_observations = 9 + 12 * 2  # [TODO: this is not properly set]
         num_privileged_obs = None  # if not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned otherwise
         num_actions = 3  # [TODO: this is not properly set]
         env_spacing = 3.  # not used with heightfields/trimeshes
@@ -93,7 +93,7 @@ class GO2HighLevelPlantPolicyCfg(LeggedRobotCfg):  # GO2DefaultCfg
     class camera:
         horizontal_fov = 120
         width = 12
-        height = 1
+        height = 720
         enable_tensors = True
         vec_from_body_center = gymapi.Vec3(0.34, 0, 0.021)  # Should be closest to reality: (0.34, 0, 0.021)m
         rot_of_camera = gymapi.Quat.from_axis_angle(
