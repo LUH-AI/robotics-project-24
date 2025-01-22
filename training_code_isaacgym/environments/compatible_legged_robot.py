@@ -13,7 +13,7 @@ from legged_gym import LEGGED_GYM_ROOT_DIR
 from legged_gym.utils.isaacgym_utils import get_euler_xyz as get_euler_xyz_in_tensor
 from legged_gym.envs.base.legged_robot import LeggedRobot
 
-from . import task_utils
+from . import utils
 
 
 # DO NOT MAKE MODIFICATIONS IN THIS FILE!!!
@@ -25,7 +25,7 @@ class CompatibleLeggedRobot(LeggedRobot, ABC):
     """This class should not be called directly"""
 
     def _place_static_objects(
-        self, env_idx: int, env_handle: Any, robot_position: torch.Tensor
+            self, env_idx: int, env_handle: Any, robot_position: torch.Tensor
     ):
         """Places static objects like walls into the provided environment
         It is called in the environment creation loop in super()._create_envs()
@@ -46,6 +46,7 @@ class CompatibleLeggedRobot(LeggedRobot, ABC):
             static_obj.to(self.device)
 
         _plant_locations = []
+        _obstacle_locations = []
         other_object_locations = []
         other_object_sizes = []
         for object_idx, static_obj in enumerate(self.cfg.scene.static_objects):
@@ -63,28 +64,28 @@ class CompatibleLeggedRobot(LeggedRobot, ABC):
             start_pose = gymapi.Transform()
             location_offset = self.env_origins[env_idx].clone()
             i = 0
-            object_location = task_utils.calculate_random_location(
+            object_location = utils.calculate_random_location(
                 location_offset,
                 static_obj.init_location,
                 static_obj.max_random_loc_offset,
             )
             # does not detect collisions of non-random objects (e.g. walls)
-            while i < 10 and static_obj.max_random_loc_offset.any():
-                object_location = task_utils.calculate_random_location(
+            while i < 100 and static_obj.max_random_loc_offset.any():
+                object_location = utils.calculate_random_location(
                     location_offset,
                     static_obj.init_location,
                     static_obj.max_random_loc_offset,
                 )
-                if task_utils.validate_location(
-                    static_obj,
-                    object_location,
-                    robot_position,
-                    other_object_locations,
-                    other_object_sizes,
+                if utils.validate_location(
+                        static_obj,
+                        object_location,
+                        robot_position,
+                        other_object_locations,
+                        other_object_sizes,
                 ):
                     break
                 i += 1
-            if i == 10:
+            if i == 100:
                 warnings.warn(
                     f"Static object could not be placed randomly without collisions ({i} tries). This can cause problems"
                 )
@@ -93,6 +94,8 @@ class CompatibleLeggedRobot(LeggedRobot, ABC):
             other_object_sizes.append(static_obj.size)
             if static_obj.type == "flower_pot":
                 _plant_locations.append(object_location)
+            if static_obj.type == "obstacle":
+                _obstacle_locations.append(object_location)
 
             start_pose.p = gymapi.Vec3(*object_location)
 
@@ -115,6 +118,15 @@ class CompatibleLeggedRobot(LeggedRobot, ABC):
             )
         else:
             self.absolute_plant_locations = plant_locations
+
+        if len(_obstacle_locations)>0:
+            obstacle_locations = torch.stack(_obstacle_locations).unsqueeze(0)
+            if len(self.absolute_obstacle_locations):
+                self.absolute_obstacle_locations = torch.cat(
+                    (self.absolute_obstacle_locations, obstacle_locations)
+                )
+            else:
+                self.absolute_obstacle_locations = obstacle_locations
 
     def _create_envs(self):
         """Creates environments:
@@ -168,10 +180,10 @@ class CompatibleLeggedRobot(LeggedRobot, ABC):
             termination_contact_names.extend([s for s in body_names if name in s])
 
         base_init_state_list = (
-            self.cfg.init_state.pos
-            + self.cfg.init_state.rot
-            + self.cfg.init_state.lin_vel
-            + self.cfg.init_state.ang_vel
+                self.cfg.init_state.pos
+                + self.cfg.init_state.rot
+                + self.cfg.init_state.lin_vel
+                + self.cfg.init_state.ang_vel
         )
         self.base_init_state = to_torch(
             base_init_state_list, device=self.device, requires_grad=False
@@ -314,7 +326,7 @@ class CompatibleLeggedRobot(LeggedRobot, ABC):
 
         _root_states = self.root_states.clone()
         # TODO randomize object positions on every reset and not just during initialization
-        reset_indices = task_utils.get_reset_indices(env_ids, self.num_objects)
+        reset_indices = utils.get_reset_indices(env_ids, self.num_objects)
 
         self.root_states_complete[reset_indices] = self.root_states_initialization[
             reset_indices
@@ -376,8 +388,8 @@ class CompatibleLeggedRobot(LeggedRobot, ABC):
         self.contact_forces = gymtorch.wrap_tensor(net_contact_forces).view(
             self.num_envs, -1, 3
         )[
-            :, : self.num_bodies
-        ]  # shape: num_envs, num_bodies, xyz axis
+                              :, : self.num_bodies
+                              ]  # shape: num_envs, num_bodies, xyz axis
 
         # initialize some data used later on
         self.common_step_counter = 0

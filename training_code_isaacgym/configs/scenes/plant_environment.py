@@ -10,7 +10,7 @@ chair_path = asset_path / "urdf" / "chair1.urdf"
 
 class PlantEnvironmentCfg(BaseSceneCfg):
     name = "plant_environment"
-    size: float = 10.0
+    size: float = 6.0
 
     static_objects = [
         StaticObject(
