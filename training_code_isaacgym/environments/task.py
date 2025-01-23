@@ -265,13 +265,10 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         # Call object detection method
         self.detected_objects = self._detect_objects()
         plants_across_envs = [obj["plants"] for obj in self.detected_objects]
-        # print(("plants_across_envs-", len(plants_across_envs), len(plants_across_envs[0]), len(plants_across_envs[0][0])))
-        plant_probability = torch.tensor([plant["probability"] for plants in plants_across_envs for plant in plants],
-                                         device=self.device).view((len(plants_across_envs), len(plants_across_envs[0])))
-        plant_distances = torch.tensor([plant["distance"] for plants in plants_across_envs for plant in plants],
-                                       device=self.device).view((len(plants_across_envs), len(plants_across_envs[0])))
-        plant_angles = torch.tensor([plant["angle"] for plants in plants_across_envs for plant in plants],
-                                    device=self.device).view((len(plants_across_envs), len(plants_across_envs[0])))
+
+        plant_probability = utils.convert_object_property(plants_across_envs, "probability", self.device)
+        plant_distances = utils.convert_object_property(plants_across_envs, "distance", self.device)
+        plant_angles = utils.convert_object_property(plants_across_envs, "angle", self.device)
 
         # Distance sensors WITH ACCESS AND END ACCESS IT actually gets GPU tensors
         self.gym.start_access_image_tensors(self.sim)
@@ -305,55 +302,37 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
     def _reward_plant_closeness(self):
         # Tracking of angular velocity commands (yaw)
         plants_across_envs = [obj["plants"] for obj in self.detected_objects]
-        # print(
-        #     ("plants_across_envs-", len(plants_across_envs), len(plants_across_envs[0]), len(plants_across_envs[0][0])))
-        plant_probability = torch.tensor([plant["probability"] for plants in plants_across_envs for plant in plants],
-                                         device=self.device).view((len(plants_across_envs), len(plants_across_envs[0])))
-        plant_distances = torch.tensor([plant["distance"] for plants in plants_across_envs for plant in plants],
-                                       device=self.device).view((len(plants_across_envs), len(plants_across_envs[0])))
-        plant_angles = torch.tensor([plant["angle"] for plants in plants_across_envs for plant in plants],
-                                    device=self.device).view((len(plants_across_envs), len(plants_across_envs[0])))
+
+        # TODO: improve reward
+        plant_probability = utils.convert_object_property(plants_across_envs, "probability", self.device)
+        plant_distances = utils.convert_object_property(plants_across_envs, "distance", self.device)
+
         combined_reward = torch.mul(torch.exp(-plant_distances.squeeze(1)), plant_probability.squeeze(1))
         combined_reward += 10 * torch.mul(torch.exp(-plant_distances.squeeze(1) * 10.), plant_probability.squeeze(1))
-        return combined_reward  # TODO: improve reward
+        return combined_reward
 
     def _reward_obstacle_closeness(self):
         # Tracking of angular velocity commands (yaw)
-        plants_across_envs = [obj["obstacles"] for obj in self.detected_objects]
-        if len(plants_across_envs) > 0:
-            print("......")
-            # print(
-            #     ("plants_across_envs-", len(plants_across_envs), len(plants_across_envs[0]), len(plants_across_envs[0][0])))
-            obstacle_probability = torch.tensor(
-                [plant["probability"] for plants in plants_across_envs for plant in plants],
-                device=self.device).view((len(plants_across_envs), len(plants_across_envs[0])))
-            obstacle_distances = torch.tensor([plant["distance"] for plants in plants_across_envs for plant in plants],
-                                              device=self.device).view(
-                (len(plants_across_envs), len(plants_across_envs[0])))
-            obstacle_angles = torch.tensor([plant["angle"] for plants in plants_across_envs for plant in plants],
-                                           device=self.device).view(
-                (len(plants_across_envs), len(plants_across_envs[0])))
+        obstacles_across_envs = [obj["obstacles"] for obj in self.detected_objects]
+        
+        # TODO: improve reward
+        obstacle_probability = utils.convert_object_property(obstacles_across_envs, "probability", self.device)
+        obstacle_distances = utils.convert_object_property(obstacles_across_envs, "distance", self.device)
+        obstacle_angles = utils.convert_object_property(obstacles_across_envs, "angle", self.device)
 
-            return torch.mul((obstacle_distances.squeeze(1) < 1.5).int().float(),
-                             torch.exp(-obstacle_distances.squeeze(1)))
-            # TODO: improve reward
-        else:
-            print("---", torch.zeros_like(self.base_ang_vel[:, 2]).to(self.device).shape)
-            return torch.zeros_like(self.base_ang_vel[:, 2]).to(self.device)
+        return torch.mul((obstacle_distances.squeeze(1) < 1.5).int().float(),
+                            torch.exp(-obstacle_distances.squeeze(1)))
 
     def _reward_plant_ahead(self):
         # Tracking of angular velocity commands (yaw)
         plants_across_envs = [obj["plants"] for obj in self.detected_objects]
-        # print(
-        #     ("plants_across_envs-", len(plants_across_envs), len(plants_across_envs[0]), len(plants_across_envs[0][0])))
-        plant_probability = torch.tensor([plant["probability"] for plants in plants_across_envs for plant in plants],
-                                         device=self.device).view((len(plants_across_envs), len(plants_across_envs[0])))
-        plant_distances = torch.tensor([plant["distance"] for plants in plants_across_envs for plant in plants],
-                                       device=self.device).view((len(plants_across_envs), len(plants_across_envs[0])))
-        plant_angles = torch.tensor([plant["angle"] for plants in plants_across_envs for plant in plants],
-                                    device=self.device).view((len(plants_across_envs), len(plants_across_envs[0])))
+
+        # TODO: improve reward
+        plant_probability = utils.convert_object_property(plants_across_envs, "probability", self.device)
+        plant_angles = utils.convert_object_property(plants_across_envs, "angle", self.device)
+
         return torch.mul(torch.exp(-plant_angles.squeeze(1) * 0.1),
-                         plant_probability.squeeze(1))  # TODO: improve reward
+                         plant_probability.squeeze(1))
 
     def _detect_objects(self):
         """Detects objects in the environment and classifies them into obstacles and plants/targets.

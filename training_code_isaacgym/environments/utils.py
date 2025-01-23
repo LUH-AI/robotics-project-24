@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Tuple, Dict
 import torch
 from rsl_rl.modules import ActorCritic
 from ..configs.robots.go2_high_level_policy_plant import GO2HighLevelPlantPolicyCfg
@@ -63,6 +63,21 @@ def validate_location(
         ):
             return False
     return True
+
+
+def convert_object_property(objects: List[List[Dict[str, torch.Tensor]]], property: str, device: str) -> torch.Tensor:
+    """Extracts object property from list of objects and creates a tensor from them
+
+    Args:
+        objects (List[List[Dict[str, torch.Tensor]]]): List of objects (for all environments)
+        property (str): Property of object (location, distance, angle or probability)
+        device (str): Device for tensors
+
+    Returns:
+        torch.Tensor: Converted object properties (for all environments)
+    """
+    return torch.tensor([object[property] for _objects in objects for object in _objects],
+                                       device=device).view((len(objects), len(objects[0])))
 
 
 def get_reset_indices(env_ids: torch.Tensor, num_objects: int) -> torch.Tensor:
