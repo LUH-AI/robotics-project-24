@@ -1,4 +1,4 @@
-from typing import Any, Callable
+from typing import Callable
 
 import torch
 from isaacgym import gymtorch, gymapi
@@ -71,12 +71,12 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         self._prepare_camera(cfg.camera)
 
         self.absolute_plant_locations: torch.Tensor = torch.tensor([])
-        self.absolute_obstacle_locations: torch.Tensor = torch.tensor([])
         """
         Absolute locations of plants in each environment
         shape: (|environments| x |plants_per_env| x 3)
         (Attribute is instantiated in self._place_static_objects())
         """
+        self.absolute_obstacle_locations: torch.Tensor = torch.tensor([])
 
         super().__init__(cfg, sim_params, physics_engine, sim_device, headless)
         # for language server purposes only
@@ -381,12 +381,11 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
             high_level_actions (torch.Tensor): Tensor of shape (num_envs, num_actions_per_env)
         """
         # Here we get high level actions and need to translate them to low level actions
-        # actions are always low_level (dim=12) and high_level_actions are high level (dim=5)
+        # actions are always low_level (dim=12) and high_level_actions are high level (dim=5) # TODO update dims
 
         self.compute_low_level_observations(high_level_actions)
         self.high_level_actions = high_level_actions
 
-        # TODO: replace hardcoded commands with high_level_actions as input
         '''
         # Begin hardcoded high-level
         rotation_command = torch.clamp(2*torch.mul(self.obs_buf[:, 8], self.obs_buf[:, 6]) + 0.5, min=-1., max=1.)
@@ -395,23 +394,14 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         forward = (self.obs_buf[:, 6] > 0.25).int().float() * 1.5
         self.low_level_obs_buf[:, 11] = rotation_command
         self.low_level_obs_buf[:, 9] = forward
-        '''
         # End hardcoded high-level
+        '''
 
         actions = self.low_level_policy.act_inference(self.low_level_obs_buf)
         # for _ in range(self.secondary_decimation):  # TODO: use better approach to ameliorate the reward allocation problem
-        obs_buf, privileged_obs_buf, rew_buf, reset_buf, extras = super().step(actions)
-        return self.obs_buf, privileged_obs_buf, rew_buf, reset_buf, extras
+        return super().step(actions)
 
     def _create_envs(self):
-        """Creates environments:
-        1. loads the robot URDF/MJCF asset,
-        2. For each environment
-           2.1 creates the environment,
-           2.2 calls DOF and Rigid shape properties callbacks,
-           2.3 create actor with these properties and add them to the env
-        3. Store indices of different bodies of the robot
-        """
         super()._create_envs()
         # ADD Camera Functionality
         self.cameras = []
