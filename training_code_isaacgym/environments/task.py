@@ -5,7 +5,6 @@ from isaacgym import gymtorch, gymapi
 from isaacgym.torch_utils import *
 
 from legged_gym.utils.task_registry import task_registry
-from legged_gym.utils.isaacgym_utils import get_euler_xyz as get_euler_xyz_in_tensor
 
 from ..configs.robots import GO2DefaultCfg
 from ..configs.scenes import BaseSceneCfg
@@ -50,12 +49,12 @@ class CustomLeggedRobot(CompatibleLeggedRobot):
             self, cfg: GO2DefaultCfg, sim_params, physics_engine, sim_device, headless
     ):
         self.absolute_plant_locations: torch.Tensor = torch.tensor([])
-        self.absolute_obstacle_locations: torch.Tensor = torch.tensor([])
         """
         Absolute locations of plants in each environment
         shape: (|environments| x |plants_per_env| x 3)
         (Attribute is instantiated in self._place_static_objects())
         """
+        self.absolute_obstacle_locations: torch.Tensor = torch.tensor([])
 
         super().__init__(cfg, sim_params, physics_engine, sim_device, headless)
         # for language server purposes only
