@@ -408,12 +408,6 @@ class CompatibleLeggedRobot(LeggedRobot, ABC):
             device=self.device,
             requires_grad=False,
         )
-        self.p_gains = torch.zeros(
-            self.num_actions, dtype=torch.float, device=self.device, requires_grad=False
-        )
-        self.d_gains = torch.zeros(
-            self.num_actions, dtype=torch.float, device=self.device, requires_grad=False
-        )
         self.actions = torch.zeros(
             self.num_envs,
             self.num_actions,
@@ -468,6 +462,8 @@ class CompatibleLeggedRobot(LeggedRobot, ABC):
         self.default_dof_pos = torch.zeros(
             self.num_dof, dtype=torch.float, device=self.device, requires_grad=False
         )
+
+        self._init_gain_buffers()
         for i in range(self.num_dofs):
             name = self.dof_names[i]
             angle = self.cfg.init_state.default_joint_angles[name]
@@ -486,3 +482,13 @@ class CompatibleLeggedRobot(LeggedRobot, ABC):
                         f"PD gain of joint {name} were not defined, setting them to zero"
                     )
         self.default_dof_pos = self.default_dof_pos.unsqueeze(0)
+
+    def _init_gain_buffers(self):
+        """Moved outside of _init_buffers so that super() call on _init_buffers() in high-level policy is possible
+        """
+        self.p_gains = torch.zeros(
+            self.num_actions, dtype=torch.float, device=self.device, requires_grad=False
+        )
+        self.d_gains = torch.zeros(
+            self.num_actions, dtype=torch.float, device=self.device, requires_grad=False
+        )
