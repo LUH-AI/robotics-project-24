@@ -1,15 +1,15 @@
 import numpy as np
+from pathlib import Path
 
 from isaacgym import gymapi
-from legged_gym.envs.base.legged_robot_config import LeggedRobotCfg
 from .go2_default import GO2DefaultCfg
 
-from ..scenes import BaseSceneCfg
-import os
 
-# this is the GO2RoughCfg copied from unitree_rl_gym repo (do not change, create a new file)
-class GO2HighLevelPlantPolicyCfg(LeggedRobotCfg):  # GO2DefaultCfg
-    name = "go2_default-high-level-policy_plant"
+class GO2HighLevelPlantPolicyCfg(GO2DefaultCfg):
+    name = "go2_high-level-policy_plant"
+
+    class asset(GO2DefaultCfg.asset):
+        file = str(Path(__file__).parents[2] / "assets/robots" / "go2_with_watering" / "urdf/go2.urdf")
 
     class low_level_policy:
         path = "./path/to/low_level_policy"  # [TODO: this is not properly set]

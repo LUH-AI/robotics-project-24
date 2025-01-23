@@ -1,5 +1,3 @@
-import os
-
 from legged_gym.envs.base.legged_robot_config import LeggedRobotCfg
 
 from ..scenes import BaseSceneCfg
@@ -41,10 +39,8 @@ class GO2DefaultCfg(LeggedRobotCfg):
         # decimation: Number of control action updates @ sim DT per policy DT
         decimation = 4
 
-
     class asset(LeggedRobotCfg.asset):
-        file = "./training_code_isaacgym/resources/robots/go2/urdf/go2.urdf"
-        # file = "{LEGGED_GYM_ROOT_DIR}/resources/robots/go2/urdf/go2.urdf"
+        file = "{LEGGED_GYM_ROOT_DIR}/resources/robots/go2/urdf/go2.urdf"
         name = "go2"
         foot_name = "foot"
         penalize_contacts_on = ["thigh", "calf"]

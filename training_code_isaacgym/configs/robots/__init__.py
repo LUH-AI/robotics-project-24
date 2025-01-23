@@ -1,2 +1,3 @@
 from .go2_default import GO2DefaultCfg
+from .go2_low_level_policy import GO2LowLevelPolicyCfg
 from .go2_high_level_policy_plant import GO2HighLevelPlantPolicyCfg

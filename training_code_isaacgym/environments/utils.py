@@ -80,8 +80,9 @@ def get_reset_indices(env_ids: torch.Tensor, num_objects: int) -> torch.Tensor:
     )
     return (stubs + env_ids.unsqueeze(1) * num_objects).view(-1).to(dtype=torch.int32)
 
+
 def load_low_level_policy(cfg: GO2HighLevelPlantPolicyCfg, sim_device):
-    module = eval("ActorCritic")(
+    module = ActorCritic(
         num_actor_obs=cfg.low_level_policy.num_observations,
         num_critic_obs=cfg.low_level_policy.num_observations,
         num_actions=cfg.low_level_policy.num_actions,
@@ -89,7 +90,7 @@ def load_low_level_policy(cfg: GO2HighLevelPlantPolicyCfg, sim_device):
         critic_hidden_dims=[512, 256, 128],
     )
     module = module.to(sim_device)
-    checkpoint = torch.load(cfg.low_level_policy.model_path)
+    checkpoint = torch.load(cfg.low_level_policy.path)
     print("low level policy", module)
 
     model_state_dict = checkpoint.get('model_state_dict')
