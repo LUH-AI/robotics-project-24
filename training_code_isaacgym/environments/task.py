@@ -412,10 +412,7 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
     def _reward_obstacle_closeness(self):
         # Tracking of angular velocity commands (yaw)
         plants_across_envs = [obj["obstacles"] for obj in self.detected_objects]
-        if len(plants_across_envs) > 0:
-            print("......")
-            # print(
-            #     ("plants_across_envs-", len(plants_across_envs), len(plants_across_envs[0]), len(plants_across_envs[0][0])))
+        if len(plants_across_envs[0]) > 0:
             obstacle_probability = torch.tensor(
                 [plant["probability"] for plants in plants_across_envs for plant in plants],
                 device=self.device).view((len(plants_across_envs), len(plants_across_envs[0])))
@@ -425,13 +422,11 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
             obstacle_angles = torch.tensor([plant["angle"] for plants in plants_across_envs for plant in plants],
                                            device=self.device).view(
                 (len(plants_across_envs), len(plants_across_envs[0])))
-
             return torch.mul((obstacle_distances.squeeze(1) < 1.5).int().float(),
                              torch.exp(-obstacle_distances.squeeze(1)))
             # TODO: improve reward
         else:
-            print("---", torch.zeros_like(self.base_ang_vel[:, 2]).to(self.device).shape)
-            return torch.zeros_like(self.base_ang_vel[:, 2]).to(self.device)
+            return 0  # No reward contribution, if no obstacles present
 
     def _reward_plant_ahead(self):
         # Tracking of angular velocity commands (yaw)

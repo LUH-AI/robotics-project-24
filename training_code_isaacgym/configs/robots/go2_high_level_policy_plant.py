@@ -65,21 +65,22 @@ class GO2HighLevelPlantPolicyCfg(LeggedRobotCfg):  # GO2DefaultCfg
         terminate_after_contacts_on = ["base"]
         self_collisions = 1  # 1 to disable, 0 to enable...bitwise filter
 
-    class rewards(LeggedRobotCfg.rewards):
-        soft_dof_pos_limit = 0.9
-        base_height_target = 0.25
+    class rewards():  # LeggedRobotCfg.rewards):
+        # soft_dof_pos_limit = 0.9
+         #base_height_target = 0.25
         # Custom rewards in order to walk to and reach the plant
+        ónly_positive_rewards = True
         # sanity_check = 10.
         plant_closeness = 5.0
         plant_ahead = 5.0
         obstacle_closeness = 10.0
 
-        class scales(LeggedRobotCfg.rewards.scales):
+        class scales():  # LeggedRobotCfg.rewards.scales):
             # only rewards that have a scale will be added (reward is named "_reward_{SCALE_NAME}")
             # [TODO: remove these reward scales, as their reward is not relevant for the high level policy anymore
             #  TODO: (left for now to have dummy values)]
-            torques = -0.0002
-            dof_pos_limits = -10.0
+            # torques = -0.0002
+            # dof_pos_limits = -10.0
             # sanity_check = 10.
             plant_closeness = 5.0
             plant_ahead = 5.0
