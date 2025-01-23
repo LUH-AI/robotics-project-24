@@ -65,6 +65,61 @@ def validate_location(
     return True
 
 
+def get_distance_and_angle(robot_location: torch.Tensor, robot_orientation: torch.Tensor, object_location: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    """Calculates distance and angle of an object to the robot
+
+    Args:
+        robot_location (torch.Tensor): Absolute location of the robot
+        robot_orientation (torch.Tensor): Orientation of the robot
+        object_location (torch.Tensor): Absolute location of the object
+
+    Returns:
+        Tuple[torch.Tensor, torch.Tensor]: Distance, angle to robot
+    """
+    # Compute distance from robot to plant
+    distance = torch.norm(object_location - robot_location)
+
+    # Compute angle from robot to plant
+    relative_position = object_location - robot_location
+    angle = torch.atan2(relative_position[1], relative_position[0]) - robot_orientation
+    angle = torch.remainder(angle + torch.pi, 2 * torch.pi) - torch.pi  # Normalize angle to [-pi, pi]
+    return distance, angle
+
+
+def get_object_observation(location: torch.Tensor, distance: torch.Tensor, angle: torch.Tensor, probability: torch.Tensor, fov_angle: torch.Tensor) -> Dict[str, torch.Tensor]:
+    # Check if the plant is within the robot's field of view (FOV)
+    if torch.abs(angle) <= fov_angle:
+        return {
+            "location": location,
+            "probability": probability,
+            "distance": distance,
+            "angle": angle,
+        }
+    else:
+        return {
+            "location": location,
+            "probability": torch.tensor(0).to(location.device),
+            "distance": distance,
+            "angle": angle,
+        }
+
+
+def get_dummy_object_observation(device: str) -> Dict[str, torch.Tensor]:
+    """Gets a dummy observation with 0 probability for correct observation shapes
+
+    Args:
+        device (str): Device for tensors
+
+    Returns:
+        Dict[str, torch.Tensor]: Dummy observation for error prevention
+    """
+    loc = torch.tensor([0,0]).to(device)
+    prob = torch.tensor(0).to(device)
+    dist = torch.tensor(0).to(device)
+    angle = torch.tensor(0).to(device)
+    return get_object_observation(loc, dist, angle, prob, 0)
+
+
 def convert_object_property(objects: List[List[Dict[str, torch.Tensor]]], property: str, device: str) -> torch.Tensor:
     """Extracts object property from list of objects and creates a tensor from them
 

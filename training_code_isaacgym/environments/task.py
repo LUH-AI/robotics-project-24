@@ -340,93 +340,38 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         Only objects within the robot's field of view (120 degrees in both axes) are detected.
 
         Returns:
-            dict: A dictionary containing detected objects for each environment, their classification, distances, and angles.
+            dict: A dictionary containing detected objects for each environment, their classification, distances, and angles. (only returns most likely obstacle and plant)
         """
         detected_objects = []
         fov_angle = torch.deg2rad(torch.tensor(120.0 / 2))  # Half of 120 degrees in radians
 
-        for env_idx in range(self.absolute_plant_locations.shape[0]):
+        for env_idx in range(self.num_envs):
             robot_position = self.base_pos[env_idx]  # Get robot position for the current environment
             robot_orientation = self.rpy[env_idx, 2]  # Get robot yaw (orientation) for the current environment
 
-            obstacles = []
-            plants = []
+            obstacles = [utils.get_dummy_object_observation(self.device)]
+            plants = [utils.get_dummy_object_observation(self.device)]
 
-            for plant_location in self.absolute_plant_locations[env_idx]:
-                # Compute distance from robot to plant
-                distance = torch.norm(plant_location - robot_position)
-
-                # Compute angle from robot to plant
-                relative_position = plant_location - robot_position
-                angle = torch.atan2(relative_position[1], relative_position[0]) - robot_orientation
-                angle = torch.remainder(angle + torch.pi, 2 * torch.pi) - torch.pi  # Normalize angle to [-pi, pi]
-                # TODO: use a better way of linking distance to a reduced prediction probability
-                probability = torch.exp(-distance)
-
-                # Check if the plant is within the robot's field of view (FOV)
-                if torch.abs(angle) <= fov_angle:
-                    plants.append({
-                        "location": plant_location,
-                        "probability": probability,
-                        "distance": distance,
-                        "angle": angle
-                    })
-                else:
-                    plants.append({
-                        "location": plant_location,
-                        "probability": 0,
-                        "distance": distance,
-                        "angle": angle
-                    })
-            if len(self.absolute_obstacle_locations) > 0:
-                for obstacle_location in self.absolute_obstacle_locations[env_idx]:
-                    # Compute distance from robot to plant
-                    distance = torch.norm(obstacle_location - robot_position)
-                    # Compute angle from robot to plant
-                    relative_position = obstacle_location - robot_position
-                    angle = torch.atan2(relative_position[1], relative_position[0]) - robot_orientation
-                    angle = torch.remainder(angle + torch.pi, 2 * torch.pi) - torch.pi  # Normalize angle to [-pi, pi]
+            if len(self.absolute_plant_locations):
+                for plant_location in self.absolute_plant_locations[env_idx]:
+                    distance, angle = utils.get_distance_and_angle(robot_position, robot_orientation, plant_location)
                     # TODO: use a better way of linking distance to a reduced prediction probability
                     probability = torch.exp(-distance)
+                    plants.append(utils.get_object_observation(plant_location, distance, angle, probability, fov_angle))
 
-                    # Check if the plant is within the robot's field of view (FOV)
-                    if torch.abs(angle) <= fov_angle:
-                        obstacles.append({
-                            "location": obstacle_location,
-                            "probability": probability,
-                            "distance": distance,
-                            "angle": angle
-                        })
-                    else:
-                        obstacles.append({
-                            "location": obstacle_location,
-                            "probability": 0,
-                            "distance": distance,
-                            "angle": angle
-                        })
-            # print("plants...", len(plants))
-            # print("sorted", sorted(plants, key=lambda p: p["probability"], reverse=True))
+            if len(self.absolute_obstacle_locations):
+                for obstacle_location in self.absolute_obstacle_locations[env_idx]:
+                    distance, angle = utils.get_distance_and_angle(robot_position, robot_orientation, obstacle_location)
+                    # TODO: use a better way of linking distance to a reduced prediction probability
+                    probability = torch.exp(-distance)
+                    obstacles.append(utils.get_object_observation(obstacle_location, distance, angle, probability, fov_angle))
+
             detected_objects.append({
                 "env_idx": env_idx,
-                # No obstacles handled yet, placeholder for future extension
                 "obstacles": sorted(obstacles, key=lambda p: p["probability"], reverse=True)[:1],
                 "plants": sorted(plants, key=lambda p: p["probability"], reverse=True)[:1]
             })
-        # In case the environment would not have plants, zero valued plants are predicted
-        if self.absolute_plant_locations.shape[0] == 0:
-            detected_objects = []
-            obstacles = []
-            plants = [{
-                "location": (0, 0, 0),
-                "probability": 0,
-                "distance": 0,
-                "angle": 0
-            }]
-            detected_objects.append({
-                "env_idx": env_idx,
-                "obstacles": obstacles,  # No obstacles handled yet, placeholder for future extension
-                "plants": plants
-            })
+
         return detected_objects
 
     def step(self, high_level_actions):
