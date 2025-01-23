@@ -11,10 +11,7 @@ from ..configs.robots import GO2DefaultCfg
 from ..configs.scenes import BaseSceneCfg
 from ..configs.algorithms import PPODefaultCfg
 from .compatible_legged_robot import CompatibleLeggedRobot
-from .utils import load_low_level_policy
 from . import utils
-
-GO2DefaultCfg()
 
 
 # do CONFIGURABLE adaptations in this file
@@ -64,82 +61,6 @@ class CustomLeggedRobot(CompatibleLeggedRobot):
         # for language server purposes only
         self.cfg: GO2DefaultCfg = self.cfg
 
-    def _create_ground_plane(self):
-        """Adds a ground plane to the simulation, sets friction and restitution based on the cfg.
-        Additionally, sets segmentation_id to 1 (index of ObjectType="ground")
-        """
-        plane_params = gymapi.PlaneParams()
-        plane_params.normal = gymapi.Vec3(0.0, 0.0, 1.0)
-        plane_params.static_friction = self.cfg.terrain.static_friction
-        plane_params.dynamic_friction = self.cfg.terrain.dynamic_friction
-        plane_params.restitution = self.cfg.terrain.restitution
-        plane_params.segmentation_id = 1  # added for compatibility
-        self.gym.add_ground(self.sim, plane_params)
-
-    def _place_static_objects(self, env_idx: int, env_handle: Any, robot_position: torch.Tensor):
-        """Places static objects like walls into the provided environment
-        It is called in the environment creation loop in super()._create_envs()
-
-        Args:
-            env_idx (int): Index of environment
-            env_handle (Any): Environment handle
-            robot_position (torch.Tensor): Robot location
-        """
-        self.object_handles.append([])
-        self.num_static_objects = len(self.cfg.scene.static_objects)
-        for object_idx, static_obj in enumerate(self.cfg.scene.static_objects):
-            if len(self.object_assets) - 1 > object_idx:
-                obj_asset = self.object_assets[object_idx]
-            else:
-                obj_asset = self.gym.load_asset(
-                    self.sim,
-                    str(static_obj.asset_root),
-                    str(static_obj.asset_file),
-                    static_obj.asset_options,
-                )
-                self.object_assets.append(obj_asset)
-
-            start_pose = gymapi.Transform()
-            location_offset = self.env_origins[env_idx].clone()
-            init_location = static_obj.init_location.to(self.device)
-            random_loc_offset = (
-                    static_obj.max_random_loc_offset
-                    * (torch.rand(static_obj.max_random_loc_offset.shape) - 0.5)
-                    * 2
-            ).to(self.device)
-            start_pose.p = gymapi.Vec3(
-                *(init_location + location_offset + random_loc_offset)
-            )
-
-            # env_idx sets collision group, -1 default for collision_filter
-            object_handle = self.gym.create_actor(
-                env_handle,
-                obj_asset,
-                start_pose,
-                static_obj.name,
-                env_idx,
-                -1,
-                static_obj.segmentation_id,
-            )
-            self.object_handles[env_idx].append(object_handle)
-
-    def compute_observations(self):
-        """ Computes observations
-        """
-        self.obs_buf = torch.cat((self.base_lin_vel * self.obs_scales.lin_vel,
-                                  self.base_ang_vel * self.obs_scales.ang_vel,
-                                  self.projected_gravity,
-                                  self.commands[:, :3] * self.commands_scale,
-                                  (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
-                                  self.dof_vel * self.obs_scales.dof_vel,
-                                  self.actions
-                                  ), dim=-1)
-        # All entries in torch.cat have dimensions, n_envs * n where you can determine n, but have to add it to n_obs in the configuration of the robot
-        # add perceptive inputs if not blind
-        # add noise if needed
-        if self.add_noise:
-            self.obs_buf += (2 * torch.rand_like(self.obs_buf) - 1) * self.noise_scale_vec
-
     # add custom rewards... here (use your robot_cfg for control)
 
 
@@ -162,23 +83,12 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         self.cfg: GO2DefaultCfg = self.cfg
 
         # Load low-level policy
-        self.low_level_policy = load_low_level_policy(cfg, sim_device)
+        self.low_level_policy = utils.load_low_level_policy(cfg, sim_device)
         # use `self.low_level_policy.act_inference(observations)`
         # or self.low_level_policy.actor(observations) to get an action.
         # See `ActorCritic` in rsl_rl/modules/actor_critic.py
         self.detected_objects = self._detect_objects()
 
-    def _create_ground_plane(self):
-        """Adds a ground plane to the simulation, sets friction and restitution based on the cfg.
-        Additionally, sets segmentation_id to 1 (index of ObjectType="ground")
-        """
-        plane_params = gymapi.PlaneParams()
-        plane_params.normal = gymapi.Vec3(0.0, 0.0, 1.0)
-        plane_params.static_friction = self.cfg.terrain.static_friction
-        plane_params.dynamic_friction = self.cfg.terrain.dynamic_friction
-        plane_params.restitution = self.cfg.terrain.restitution
-        plane_params.segmentation_id = 1  # added for compatibility
-        self.gym.add_ground(self.sim, plane_params)
 
     def _prepare_camera(self, camera):
         print("Preparing")
@@ -384,15 +294,6 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
                                   torch.mul(plant_angles, plant_probability),
                                   observable_depth_information,
                                   ), dim=-1)
-
-    # dont rename, onPolicyRunner calls this
-    def get_observations(self):
-        # print(f"get_observations Self.obs.shape {self.obs_buf.shape}")
-        # TODO: Add Distance measure to observation / preprocess it to a good range. Currently: -inf = infinitely far away and -0.1 is 10cm away
-        # raise NotImplementedError
-        # Here we get low level observations and need to transform them to high level observations
-        # This will probably also need customization of the configuration
-        return self.obs_buf
 
     # add custom rewards... here (use your robot_cfg for control)
     def _reward_sanity_check(self):
