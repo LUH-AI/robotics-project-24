@@ -177,9 +177,9 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         self.detected_objects = self._detect_objects()
         plants_across_envs = [obj["plants"] for obj in self.detected_objects]
 
-        plant_probability = utils.convert_object_property(plants_across_envs, "probability", self.device)
-        plant_distances = utils.convert_object_property(plants_across_envs, "distance", self.device)
-        plant_angles = utils.convert_object_property(plants_across_envs, "angle", self.device)
+        plant_probability = utils.convert_object_property(plants_across_envs, "probability", self.device).unsqueeze(1)
+        plant_distances = utils.convert_object_property(plants_across_envs, "distance", self.device).unsqueeze(1)
+        plant_angles = utils.convert_object_property(plants_across_envs, "angle", self.device).unsqueeze(1)
 
         # Distance sensors WITH ACCESS AND END ACCESS IT actually gets GPU tensors
         self.gym.start_access_image_tensors(self.sim)
@@ -218,8 +218,8 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         plant_probability = utils.convert_object_property(plants_across_envs, "probability", self.device)
         plant_distances = utils.convert_object_property(plants_across_envs, "distance", self.device)
 
-        combined_reward = torch.mul(torch.exp(-plant_distances.squeeze(1)), plant_probability.squeeze(1))
-        combined_reward += 10 * torch.mul(torch.exp(-plant_distances.squeeze(1) * 10.), plant_probability.squeeze(1))
+        combined_reward = torch.exp(-plant_distances) * plant_probability
+        combined_reward += 10 * torch.exp(-plant_distances * 10.) * plant_probability
         return combined_reward
 
     def _reward_obstacle_closeness(self):
@@ -230,9 +230,7 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         obstacle_probability = utils.convert_object_property(obstacles_across_envs, "probability", self.device)
         obstacle_distances = utils.convert_object_property(obstacles_across_envs, "distance", self.device)
         obstacle_angles = utils.convert_object_property(obstacles_across_envs, "angle", self.device)
-
-        return torch.mul((obstacle_distances.squeeze(1) < 1.5).int().float(),
-                            torch.exp(-obstacle_distances.squeeze(1)))
+        return (obstacle_distances < 1.5).float() * torch.exp(-obstacle_distances)
 
     def _reward_plant_ahead(self):
         # Tracking of angular velocity commands (yaw)
@@ -242,8 +240,7 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         plant_probability = utils.convert_object_property(plants_across_envs, "probability", self.device)
         plant_angles = utils.convert_object_property(plants_across_envs, "angle", self.device)
 
-        return torch.mul(torch.exp(-plant_angles.squeeze(1) * 0.1),
-                         plant_probability.squeeze(1))
+        return torch.exp(-plant_angles * 0.1) * plant_probability
 
     def _detect_objects(self):
         """Detects objects in the environment and classifies them into obstacles and plants/targets.

@@ -132,7 +132,7 @@ def convert_object_property(objects: List[List[Dict[str, torch.Tensor]]], proper
         torch.Tensor: Converted object properties (for all environments)
     """
     return torch.tensor([object[property] for _objects in objects for object in _objects],
-                                       device=device).view((len(objects), len(objects[0])))
+                                       device=device).view((len(objects), len(objects[0]))).squeeze(1)
 
 
 def get_reset_indices(env_ids: torch.Tensor, num_objects: int) -> torch.Tensor:
