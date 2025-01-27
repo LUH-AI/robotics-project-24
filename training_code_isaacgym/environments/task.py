@@ -230,7 +230,7 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         obstacle_probability = utils.convert_object_property(obstacles_across_envs, "probability", self.device)
         obstacle_distances = utils.convert_object_property(obstacles_across_envs, "distance", self.device)
         obstacle_angles = utils.convert_object_property(obstacles_across_envs, "angle", self.device)
-        return (obstacle_distances < 1.5).float() * torch.exp(-obstacle_distances)
+        return (obstacle_distances < 1.5).float() * torch.exp(-obstacle_distances) * obstacle_probability
 
     def _reward_plant_ahead(self):
         # Tracking of angular velocity commands (yaw)
@@ -264,14 +264,14 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
                 for plant_location in self.absolute_plant_locations[env_idx]:
                     distance, angle = utils.get_distance_and_angle(robot_position, robot_orientation, plant_location)
                     # TODO: use a better way of linking distance to a reduced prediction probability
-                    probability = torch.exp(-distance)
+                    probability = 1.0
                     plants.append(utils.get_object_observation(plant_location, distance, angle, probability, fov_angle))
 
             if len(self.absolute_obstacle_locations):
                 for obstacle_location in self.absolute_obstacle_locations[env_idx]:
                     distance, angle = utils.get_distance_and_angle(robot_position, robot_orientation, obstacle_location)
                     # TODO: use a better way of linking distance to a reduced prediction probability
-                    probability = torch.exp(-distance)
+                    probability = 1.0
                     obstacles.append(utils.get_object_observation(obstacle_location, distance, angle, probability, fov_angle))
 
             detected_objects.append({
@@ -296,9 +296,10 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         high_level_actions[:, 0] = 2.0
         """
 
-        self.compute_low_level_observations(high_level_actions)
-        self.high_level_actions = high_level_actions
+        bounded_high_level_actions = torch.tanh(high_level_actions)
 
+        self.compute_low_level_observations(bounded_high_level_actions)
+        self.high_level_actions = bounded_high_level_actions
 
         actions = self.low_level_policy.act_inference(self.low_level_obs_buf)
         return super().step(actions)

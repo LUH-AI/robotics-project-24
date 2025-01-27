@@ -8,3 +8,6 @@ class PPOMovePolicyPlantCfg(PPODefaultCfg):
 class PPOHighLevelPolicyPlantCfg(PPODefaultCfg):
     name = "ppo_high-level-policy_plant"
     # This class is here to be able to modify the hyperparameters for PPO independently from the low level policy
+    class runner:
+        max_iterations = 2500
+        save_interval = 500  # check for potential saves every this many iterations
