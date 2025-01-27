@@ -285,7 +285,7 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
 
         return detected_objects
 
-    def step(self, high_level_actions):
+    def step(self, high_level_actions: torch.Tensor):
         """ Apply actions, simulate, call self.post_physics_step()
 
         Args:
@@ -293,23 +293,17 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         """
         # Here we get high level actions and need to translate them to low level actions
         # actions are always low_level (dim=12) and high_level_actions are high level (dim=5) # TODO update dims
+        """
+        # fixed dummy actions for testing
+        high_level_actions = torch.zeros_like(high_level_actions, device=self.device)
+        high_level_actions[:, 0] = 2.0
+        """
 
         self.compute_low_level_observations(high_level_actions)
         self.high_level_actions = high_level_actions
 
-        '''
-        # Begin hardcoded high-level
-        rotation_command = torch.clamp(2*torch.mul(self.obs_buf[:, 8], self.obs_buf[:, 6]) + 0.5, min=-1., max=1.)
-        self.low_level_obs_buf[:, 9:12] = (torch.tensor([0, 0.0, 0.], dtype=torch.float).
-                                 repeat(self.high_level_actions.shape[0],1).to(self.device))
-        forward = (self.obs_buf[:, 6] > 0.25).int().float() * 1.5
-        self.low_level_obs_buf[:, 11] = rotation_command
-        self.low_level_obs_buf[:, 9] = forward
-        # End hardcoded high-level
-        '''
 
         actions = self.low_level_policy.act_inference(self.low_level_obs_buf)
-        # for _ in range(self.secondary_decimation):  # TODO: use better approach to ameliorate the reward allocation problem
         return super().step(actions)
 
     def _create_envs(self):
