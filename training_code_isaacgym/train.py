@@ -17,6 +17,7 @@ from .configs import (
 
 robots = {
     "go2_default": robot_configs.GO2DefaultCfg(),
+    "go2_low-level-policy": robot_configs.GO2LowLevelPolicyCfg(),
     "go2_high-level-policy_plant": robot_configs.GO2HighLevelPlantPolicyCfg(),
 }
 scenes = {
