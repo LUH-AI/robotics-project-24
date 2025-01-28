@@ -88,6 +88,8 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         # See `ActorCritic` in rsl_rl/modules/actor_critic.py
         self.detected_objects = self._detect_objects()
 
+        self.state_novelty = utils.RandomNetworkDistillation(self.cfg, self.device)
+
 
     def _prepare_camera(self, camera):
         print("Preparing")
@@ -241,6 +243,14 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         plant_angles = utils.convert_object_property(plants_across_envs, "angle", self.device)
 
         return torch.exp(-plant_angles * 0.1) * plant_probability
+
+    def _reward_state_novelty(self):
+        """ Calculates state novelty using Random Network Distillation [Burda et al., 2018]
+        """
+        robot_positions = self.base_pos.detach().clone().to(self.device)
+        robot_positions.requires_grad = False
+
+        return self.state_novelty(robot_positions)
 
     def _detect_objects(self):
         """Detects objects in the environment and classifies them into obstacles and plants/targets.
