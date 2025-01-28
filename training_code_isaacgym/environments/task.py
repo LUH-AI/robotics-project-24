@@ -87,6 +87,9 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         # or self.low_level_policy.actor(observations) to get an action.
         # See `ActorCritic` in rsl_rl/modules/actor_critic.py
         self.detected_objects = self._detect_objects()
+        self.high_level_actions_prev1 = None
+        self.high_level_actions_prev2 = None
+
 
 
     def _prepare_camera(self, camera):
@@ -168,6 +171,10 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
             ),
             dim=-1,
         )
+        self.high_level_actions_prev1 = high_level_actions
+        self.high_level_actions_prev2 = self.high_level_actions_prev1
+        if self.high_level_actions_prev2==None:
+            self.high_level_actions_prev2 = high_level_actions
 
     # computes high level observations
     def compute_observations(self):
@@ -195,12 +202,14 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         upper_image_min = depth_information[:, :self.half_image_idx, :].min(dim=1).values
         lower_image_min = depth_information[:, self.half_image_idx:, :].min(dim=1).values
         observable_depth_information = torch.cat((upper_image_min, lower_image_min), dim=1)
-        self.obs_buf = torch.cat((self.base_lin_vel * self.obs_scales.lin_vel,
-                                  self.projected_gravity,
+        self.obs_buf = torch.cat((# self.base_lin_vel * self.obs_scales.lin_vel,
+                                  # self.projected_gravity,
                                   plant_probability,
-                                  torch.mul(plant_distances, plant_probability),
-                                  torch.mul(plant_angles, plant_probability),
-                                  observable_depth_information,
+                                  torch.tanh(torch.mul(plant_distances, plant_probability)),
+                                  torch.tanh(torch.mul(plant_angles, plant_probability)),
+                                  torch.tanh(observable_depth_information),
+                                  self.high_level_actions_prev1,
+                                  self.high_level_actions_prev2
                                   ), dim=-1)
 
     # add custom rewards... here (use your robot_cfg for control)
@@ -218,14 +227,14 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         plant_probability = utils.convert_object_property(plants_across_envs, "probability", self.device)
         plant_distances = utils.convert_object_property(plants_across_envs, "distance", self.device)
 
-        combined_reward = torch.exp(-plant_distances) * plant_probability
-        combined_reward += 10 * torch.exp(-plant_distances * 10.) * plant_probability
+        combined_reward = torch.exp(-plant_distances)
+        combined_reward += 10 * torch.exp(-plant_distances * 10.)
         return combined_reward
 
     def _reward_obstacle_closeness(self):
         # Tracking of angular velocity commands (yaw)
         obstacles_across_envs = [obj["obstacles"] for obj in self.detected_objects]
-        
+
         # TODO: improve reward
         obstacle_probability = utils.convert_object_property(obstacles_across_envs, "probability", self.device)
         obstacle_distances = utils.convert_object_property(obstacles_across_envs, "distance", self.device)
@@ -240,7 +249,13 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         plant_probability = utils.convert_object_property(plants_across_envs, "probability", self.device)
         plant_angles = utils.convert_object_property(plants_across_envs, "angle", self.device)
 
-        return torch.exp(-plant_angles * 0.1) * plant_probability
+        return torch.exp(-plant_angles)
+
+    def _reward_smooth_strategies(self, threshold=0.25):
+        # Difference between subsequent policies should below a threshold of 0.2
+        difference_in_commands = torch.abs(self.high_level_actions_prev1-self.high_level_actions_prev2)
+        difference_in_commands_with_threshold = torch.where(difference_in_commands>threshold, difference_in_commands-threshold, 0)
+        return difference_in_commands_with_threshold.mean()
 
     def _detect_objects(self):
         """Detects objects in the environment and classifies them into obstacles and plants/targets.
@@ -264,14 +279,14 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
                 for plant_location in self.absolute_plant_locations[env_idx]:
                     distance, angle = utils.get_distance_and_angle(robot_position, robot_orientation, plant_location)
                     # TODO: use a better way of linking distance to a reduced prediction probability
-                    probability = torch.exp(-distance)
+                    probability = 1.0-torch.tanh(torch.rand(1).to(self.device)*distance*0.1).to(self.device)
                     plants.append(utils.get_object_observation(plant_location, distance, angle, probability, fov_angle))
 
             if len(self.absolute_obstacle_locations):
                 for obstacle_location in self.absolute_obstacle_locations[env_idx]:
                     distance, angle = utils.get_distance_and_angle(robot_position, robot_orientation, obstacle_location)
                     # TODO: use a better way of linking distance to a reduced prediction probability
-                    probability = torch.exp(-distance)
+                    probability = 1.0-torch.tanh(torch.rand(1).to(self.device)*distance*0.1).to(self.device)
                     obstacles.append(utils.get_object_observation(obstacle_location, distance, angle, probability, fov_angle))
 
             detected_objects.append({
@@ -298,7 +313,6 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
 
         self.compute_low_level_observations(high_level_actions)
         self.high_level_actions = high_level_actions
-
 
         actions = self.low_level_policy.act_inference(self.low_level_obs_buf)
         return super().step(actions)

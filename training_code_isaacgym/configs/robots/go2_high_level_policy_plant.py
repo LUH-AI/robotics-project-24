@@ -18,7 +18,7 @@ class GO2HighLevelPlantPolicyCfg(GO2DefaultCfg):
 
     class env(GO2DefaultCfg.env):
         num_envs = 32
-        num_observations = 9 + 12 * 2  # [TODO: this is not properly set]
+        num_observations = 3 + 12 * 2 + 6 # [TODO: this is not properly set]
         num_privileged_obs = None  # if not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned otherwise
         num_actions = 3  # [TODO: this is not properly set]
         episode_length_s = 8  # episode length in seconds
@@ -34,7 +34,8 @@ class GO2HighLevelPlantPolicyCfg(GO2DefaultCfg):
             # sanity_check = 10.
             plant_closeness = 5.0
             plant_ahead = 5.0
-            obstacle_closeness = -10.0 # TODO or -10 from upper values
+            obstacle_closeness = -5.0
+            smooth_strategies = -1.
 
     # robot camera:
     class camera:
