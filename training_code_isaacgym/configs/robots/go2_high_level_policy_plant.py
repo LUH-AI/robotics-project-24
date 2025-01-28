@@ -35,14 +35,6 @@ class GO2HighLevelPlantPolicyCfg(GO2DefaultCfg):
             plant_closeness = 5.0
             plant_ahead = 1.0
             obstacle_closeness = -10.0 # TODO or -10 from upper values
-            state_novelty = 1.0
-
-        class random_network_distillation:
-            hidden_dimensions = [64, 64, ]
-            activation = "relu"
-            loss = "mse"
-            optimizer = "adamw"
-            learning_rate = 0.001
 
     # robot camera:
     class camera:
