@@ -214,16 +214,15 @@ class RandomNetworkDistillation:
         )
         self.loss = rnd_loss_class()
 
+    @torch.enable_grad()
     def __call__(self, input: torch.Tensor, learn_network: bool = True) -> torch.Tensor:
         self.optimizer.zero_grad()
         with torch.no_grad():
             out_fixed = self.randnetwork(input)
-        with torch.enable_grad():  # Someone somewhere disables this for some reason, we need it here
-            self.predictnetwork.requires_grad_()
-            out_learned = self.predictnetwork(input)
+        out_learned = self.predictnetwork(input)
 
-            loss = self.loss(out_learned, out_fixed)
-            loss.backward()
-            self.optimizer.step()
+        loss = self.loss(out_learned, out_fixed)
+        loss.backward()
+        self.optimizer.step()
 
         return loss.detach().clone().item()
