@@ -88,6 +88,38 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         # See `ActorCritic` in rsl_rl/modules/actor_critic.py
         self.detected_objects = self._detect_objects()
 
+        # For State Novelty/Random Network Distillation
+        ## "parse" config
+        dimensions = [3] + self.cfg.rewards.random_network_distillation.hidden_dimensions
+        activation_class = {
+            "relu": torch.nn.ReLU,
+            "leakyrelu": torch.nn.LeakyReLU,
+        }[self.cfg.rewards.random_network_distillation.activation]
+        rnd_optimizer_class = {
+            "adamw": torch.optim.AdamW,
+        }[self.cfg.rewards.random_network_distillation.optimizer]
+        rnd_loss_class = {
+            "mse": torch.nn.MSELoss,
+        }[self.cfg.rewards.random_network_distillation.loss]
+
+        ## create needed objects
+        self.rnd_randnetwork = torch.nn.Sequential(
+            *[
+                torch.nn.Sequential(torch.nn.Linear(in_features, out_features), torch.nn.ReLU())
+                for in_features, out_features in zip(dimensions[:-1], dimensions[1:])
+            ]
+        ).to(self.device)
+        self.rnd_predictnetwork = torch.nn.Sequential(
+            *[
+                torch.nn.Sequential(torch.nn.Linear(in_features, out_features), torch.nn.ReLU())
+                for in_features, out_features in zip(dimensions[:-1], dimensions[1:])
+            ]
+        ).to(self.device)
+        self.rnd_optimizer = rnd_optimizer_class(
+            self.rnd_predictnetwork.parameters(),
+            lr=self.cfg.rewards.random_network_distillation.learning_rate,
+        )
+        self.rnd_loss = rnd_loss_class()
 
     def _prepare_camera(self, camera):
         print("Preparing")
@@ -241,6 +273,27 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         plant_angles = utils.convert_object_property(plants_across_envs, "angle", self.device)
 
         return torch.exp(-plant_angles * 0.1) * plant_probability
+
+    def _reward_state_novelty(self):
+        """
+        Calculates state novelty using Random Network Distillation [Burda et al., 2018]
+        """
+        robot_positions = self.base_pos.detach().clone().to(self.device)
+        robot_positions.requires_grad = False
+
+        self.rnd_optimizer.zero_grad()
+        with torch.no_grad():
+            out_fixed = self.rnd_randnetwork(robot_positions)
+        with torch.enable_grad():  # Someone somewhere disables this for some reason, we need it here
+            self.rnd_predictnetwork.requires_grad_()
+            out_learned = self.rnd_predictnetwork(robot_positions)
+
+            loss = self.rnd_loss(out_learned, out_fixed)
+            import ipdb; ipdb.set_trace()
+            loss.backward()
+            self.rnd_optimizer.step()
+
+        return loss.detach().clone().item()
 
     def _detect_objects(self):
         """Detects objects in the environment and classifies them into obstacles and plants/targets.
