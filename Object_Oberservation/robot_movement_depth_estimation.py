@@ -37,10 +37,17 @@ field_of_view = 120  # Sichtfeld der Kamera in Grad
 
 map_size = 1000
 
+test_not_move_robot = True
+
+obstacle_avoid_client = None
+
 # Handler-Methode: Signal für KeyboardInterrupt abfangen
 def sigint_handler(signal, frame):
     """Keyboard Interrupt function."""
     print ("--> KeyboardInterrupt abgefangen")
+    global obstacle_avoid_client
+    obstacle_avoid_client.Move(0,0,0.0)
+    cv2.destroyAllWindows()
     #Programm abbrechen, sonst läuft loop weiter
     sys.exit(0)
 
@@ -154,6 +161,7 @@ def main():  # noqa: D103
         ChannelFactoryInitialize(0)
     """
     #urdf_loader = URDFLoader()
+    global obstacle_avoid_client
     obstacle_avoid_client = ObstaclesAvoidClient()
     obstacle_avoid_client.SetTimeout(3.0)
     obstacle_avoid_client.Init()
@@ -176,6 +184,9 @@ def main():  # noqa: D103
 
     code, data = client.GetImageSample()
 
+    #fourcc = cv2.VideoWriter_fourcc(*'XVID')
+    #out = cv2.VideoWriter('output.mp4', fourcc, 20.0, (1920, 1080))
+
     #lidar_subscriber = ChannelSubscriber("rt/utlidar/cloud", PointCloud2_)
     #lidar_subscriber.Init(lidar_cloud_message_handler, 10)
 
@@ -185,12 +196,24 @@ def main():  # noqa: D103
 
     # Alle Bilder im Ordner durchlaufen
     while code == 0:
+        """
+        for i in range(3):
+            print(i+1,"/10")
+            obstacle_avoid_client.Move(0.0,0,0.0)
+            print("WAIT after Move")
+            time.sleep(1)
+            obstacle_avoid_client.Move(0,0,0.0)
+            print("Wait after stop")
+            time.sleep(1)
+        break
+        """
         # Get Image data from Go2 robot
         code, data = client.GetImageSample()
         if data is not None:
             # Convert to numpy image
             image_data = np.frombuffer(bytes(data), dtype=np.uint8)
             image = cv2.imdecode(image_data, cv2.IMREAD_COLOR)
+            #out.write(image) # Hier oben, damit keine Bounding Boxen im Bild sind
 
 
             # Prediction durchführen
@@ -212,15 +235,44 @@ def main():  # noqa: D103
                         x_center = (x1 + x2) / 2
                         angle = calculate_angle(x_center, image.shape[1])
 
-                        # Entfernungsschätzung für den Topf basierend auf der Bounding Box
                         if cls == 1:  # Klasse 0 ist der Blumentopf (angepasst an die Klassendefinition)
+                            cropped_image = image[int(y1):int(y2), int(x1):int(x2)]
+                            gray = cv2.cvtColor(cropped_image, cv2.COLOR_BGR2GRAY)
+                            threshold = 80  # Werte über 200 gelten als weiß
+
+                            _, binary = cv2.threshold(gray, threshold, 255, cv2.THRESH_BINARY)
+                            cv2.imshow("Binary",binary)
+                            height = binary.shape[0]
+                            lower_third_start = int(height * (2 / 3))  # Start des unteren Drittels
+
+                            white_pixel_positions = np.column_stack(np.where(binary[lower_third_start:, :] == 255))
+
                             pot_width_pixels = x2 - x1
+                            if len(white_pixel_positions) > 0:
+                                white_pixel_positions[:, 0] += lower_third_start
+
+                                leftmost_pixel = white_pixel_positions[np.argmin(white_pixel_positions[:, 1])]
+
+                                rightmost_pixel = white_pixel_positions[np.argmax(white_pixel_positions[:, 1])]
+                                print(f"Linkester weißer Pixel: {leftmost_pixel}")
+                                print(f"Rechtester weißer Pixel: {rightmost_pixel}")
+
+                                cv2.circle(cropped_image, (leftmost_pixel[1], leftmost_pixel[0]), 5, (0, 0, 255), -1)  # Rot
+                                cv2.circle(cropped_image, (rightmost_pixel[1], rightmost_pixel[0]), 5, (255, 0, 0), -1)  # Blau
+
+                                pot_width_pixels = rightmost_pixel[1] - leftmost_pixel[1]
+                                print(pot_width_pixels, rightmost_pixel[1], leftmost_pixel[1])
+
+                            cv2.imshow("Cropped Image",cropped_image)
+
                             distance = calculate_distance(pot_width_pixels)
                             pot_positions.append((distance, angle))
                             if distance < closest_pot[0]:
                                 closest_pot = [distance, angle]
-
-                            label = f"Class {int(cls)}: {confidence:.2f}, Distance {int(distance)}"
+                            if len(white_pixel_positions) > 0:
+                                label = f"Class {int(cls)}: {confidence:.2f}, Distance {int(x2-x1)}, Mask-Distance:{int(distance)}"
+                            else:
+                                label = f"Class {int(cls)}: {confidence:.2f}, Distance {int(distance)}"
                         else:
                             label = f"Class {int(cls)}: {confidence:.2f}"
                         color = (0, 255, 0)  # Grün
@@ -231,29 +283,34 @@ def main():  # noqa: D103
             update_local_map(robot_position, plants, pot_positions)
             if closest_pot[1] is None:
                 #sport_client.Move(0,0,0)# Hier ggf den Roboter drehen lassen bis er was erkennt
-                code = obstacle_avoid_client.Move(0,0,0)
-                print("NIX ERKANNT",code)
+                if not test_not_move_robot:
+                    code = obstacle_avoid_client.Move(0,0,0)
+                    print("NIX ERKANNT",code)
             else:
                 print("Distance: ",closest_pot[0],"ANGLE: ",closest_pot[1])
                 if abs (closest_pot[1]) < 20:
                     if closest_pot[0] > 60: #cm
                         #sport_client.Move(1.0,0,0)
-                        code = obstacle_avoid_client.Move(1.0,0,0)
-                        print("MOVE FORWARD",code)
+                        if not test_not_move_robot:
+                            code = obstacle_avoid_client.Move(1.0,0,0)
+                            print("MOVE FORWARD",code)
                     else: #Hier ggf aufs Lidar wechseln
                         #sport_client.Move(0,0,0)
-                        code = obstacle_avoid_client.Move(0,0,0)
-                        print("STOP BECAUSE TOO CLOSE",code)
+                        if not test_not_move_robot:
+                            code = obstacle_avoid_client.Move(0,0,0)
+                            print("STOP BECAUSE TOO CLOSE",code)
                 else:
                     # Hier ggf links und rechts vertauscht
                     if closest_pot[1] < 0:#Hier ggf den angle an steering mappen
                         #sport_client.Move(0,0,-1.0)
-                        code = obstacle_avoid_client.Move(0,0,-1.0)
-                        print("TURN ROBOT RIGHT",code)
+                        if not test_not_move_robot:
+                            code = obstacle_avoid_client.Move(0,0,-1.0)
+                            print("TURN ROBOT RIGHT",code)
                     else:
                         #sport_client.Move(0,0,1.0)
-                        code = obstacle_avoid_client.Move(0,0,1.0)
-                        print("TURN ROBOT LEFT",code)
+                        if not test_not_move_robot:
+                            code = obstacle_avoid_client.Move(0,0,1.0)
+                            print("TURN ROBOT LEFT",code)
             # Bild anzeigen
             cv2.imshow("Erkannte_Objekte", image)
 
@@ -262,6 +319,7 @@ def main():  # noqa: D103
 
     # OpenCV-Fenster schließen
     cv2.destroyAllWindows()
+    #out.release()
 
 if __name__ == "__main__":
     main()
