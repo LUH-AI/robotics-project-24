@@ -287,7 +287,7 @@ def main():  # noqa: D103
 
             if closest_pot[1] is None:
                 #sport_client.Move(0,0,0)# Hier ggf den Roboter drehen lassen bis er was erkennt
-                code = obstacle_avoid_client.Move(0,0,0)
+                code = obstacle_avoid_client.Move(0, 0, 0)
                 print("NIX ERKANNT",code)
             else:
                 print("Distance: ",closest_pot[0],"ANGLE: ",closest_pot[1])
