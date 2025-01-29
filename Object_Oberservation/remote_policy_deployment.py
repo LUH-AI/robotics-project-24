@@ -22,6 +22,7 @@ from unitree_sdk2py.go2.video.video_client import VideoClient
 from unitree_sdk2py.idl.sensor_msgs.msg.dds_ import PointCloud2_
 from unitree_sdk2py.idl.unitree_go.msg.dds_ import LowState_
 from unitree_sdk2py.idl.unitree_go.msg.dds_ import LowState_
+# from training_code_isaacgym.environments import utils
 
 # Konfiguration
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -37,6 +38,37 @@ image_center_x = 640  # Beispielwert für Bildmitte in Pixeln (angepasst an die 
 field_of_view = 120  # Sichtfeld der Kamera in Grad
 
 map_size = 1000
+
+
+# *********************
+from actor_critic import ActorCriticRecurrent
+# def load_low_level_policy(sim_device):
+module = ActorCriticRecurrent(
+    num_actor_obs=3 + 12 * 2 + 6,
+    num_critic_obs=3 + 12 * 2 + 6,
+    num_actions=3,
+    actor_hidden_dims=[128, 128],
+    critic_hidden_dims=[128, 128],
+    rnn_hidden_size = 128,
+)
+# module = module.to(sim_device)
+checkpoint = torch.load("models/deployment_model_v1.pth")
+print("low level policy", module)
+
+model_state_dict = checkpoint.get('model_state_dict')
+if model_state_dict is None:
+    raise ValueError("The checkpoint does not contain a 'model_state_dict' key.")
+
+try:
+    module.load_state_dict(model_state_dict)
+except RuntimeError as e:
+    print("\nError while loading state dictionary:")
+    print(e)
+    # return None
+
+# return module
+# *********************
+
 
 # Handler-Methode: Signal für KeyboardInterrupt abfangen
 def sigint_handler(signal, frame):
@@ -233,21 +265,29 @@ def main():  # noqa: D103
             # closest_pot
             # Add some probability term, here 1/distance was used like in the simulation
             if closest_pot[1] is None:
-                object_detection_output = [0, 0, 0]
+                object_detection_output = torch.tensor([0, 0, 0])
             else:
-                object_detection_output = [closest_pot[0], closest_pot[1] * torch.exp(-closest_pot[0]),
-                                           torch.exp(-closest_pot[0])]
+                object_detection_output = torch.tensor([closest_pot[0], closest_pot[1] * torch.exp(-closest_pot[0]),
+                                           torch.exp(-closest_pot[0])])
 
-            policy_observations = []
+            observable_depth_information = torch.ones(12).float()
+            observations = torch.cat(object_detection_output,
+                            torch.tanh(observable_depth_information),
+                            high_level_actions_prev1,
+                            high_level_actions_prev2)
+            print("observations", observations.shape)
+            commands = module.act_inference(observations)
+            print("actions", commands.shape)
 
-
-            code = obstacle_avoid_client.Move(0, 0, 1.0)
+            high_level_actions_prev2 = high_level_actions_prev1
+            high_level_actions_prev1 = commands
+            code = obstacle_avoid_client.Move(commands[0], commands[1], commands[2])
             print("Apply action", code)
 
 
             if closest_pot[1] is None:
                 #sport_client.Move(0,0,0)# Hier ggf den Roboter drehen lassen bis er was erkennt
-                code = obstacle_avoid_client.Move(0,0,0)
+                code = obstacle_avoid_client.Move(0, 0, 0)
                 print("NIX ERKANNT",code)
             else:
                 print("Distance: ",closest_pot[0],"ANGLE: ",closest_pot[1])
