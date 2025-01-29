@@ -20,8 +20,8 @@ class SinglePlantCfg(BaseSceneCfg):
             "flower",
             "flower_pot",
             plant_path,
-            max_random_loc_offset=(2.3, 2.3, 0),
+            max_random_loc_offset=(2.25, 2.25, 0),
             size=(0.125, 0.125, 0.3),
         ),
     ]
-    size = 5.0
+    size = 3.0

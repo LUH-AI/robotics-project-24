@@ -25,7 +25,7 @@ class CompatibleLeggedRobot(LeggedRobot, ABC):
     """This class should not be called directly"""
 
     def _place_static_objects(
-            self, env_idx: int, env_handle: Any, robot_position: torch.Tensor
+            self, env_idx: int, env_handle: Any, robot_position: torch.Tensor, replace: bool = False
     ):
         """Places static objects like walls into the provided environment
         It is called in the environment creation loop in super()._create_envs()
@@ -37,31 +37,35 @@ class CompatibleLeggedRobot(LeggedRobot, ABC):
         """
         if not len(self.cfg.scene.static_objects):
             return
-        self.object_handles.append([])
+        # if not replace:
+        self.object_handles: List[List[Any]] = []
+        # self.object_handles.append([])
+
 
         self.num_static_objects = len(self.cfg.scene.static_objects)
-
         # move all tensors to device
         for static_obj in self.cfg.scene.static_objects:
             static_obj.to(self.device)
-
+        # if not replace:
         _plant_locations = []
         _obstacle_locations = []
         other_object_locations = []
         other_object_sizes = []
         for object_idx, static_obj in enumerate(self.cfg.scene.static_objects):
-            if len(self.object_assets) - 1 > object_idx:
-                obj_asset = self.object_assets[object_idx]
-            else:
-                obj_asset = self.gym.load_asset(
-                    self.sim,
-                    str(static_obj.asset_root),
-                    str(static_obj.asset_file),
-                    static_obj.asset_options,
-                )
-                self.object_assets.append(obj_asset)
+            if not replace:
+                if len(self.object_assets) - 1 > object_idx:
+                    obj_asset = self.object_assets[object_idx]
+                else:
+                    obj_asset = self.gym.load_asset(
+                        self.sim,
+                        str(static_obj.asset_root),
+                        str(static_obj.asset_file),
+                        static_obj.asset_options,
+                    )
+                    self.object_assets.append(obj_asset)
 
             start_pose = gymapi.Transform()
+
             location_offset = self.env_origins[env_idx].clone()
             i = 0
             object_location = utils.calculate_random_location(
@@ -98,18 +102,22 @@ class CompatibleLeggedRobot(LeggedRobot, ABC):
                 _obstacle_locations.append(object_location)
 
             start_pose.p = gymapi.Vec3(*object_location)
-
             # env_idx sets collision group, -1 default for collision_filter
+            print("self.gym.create_actor", env_idx, object_idx)
             object_handle = self.gym.create_actor(
                 env_handle,
-                obj_asset,
+                self.object_assets[object_idx],
                 start_pose,
                 static_obj.name,
                 env_idx,
                 -1,
                 static_obj.segmentation_id,
             )
-            self.object_handles[env_idx].append(object_handle)
+            # print("len(self.object_handles)", len(self.object_handles), env_idx)
+            if not replace:
+                self.object_handles.append(object_handle)
+            # else:
+            #     self.object_handles[env_idx] = object_handle
 
         plant_locations = torch.stack(_plant_locations).unsqueeze(0)
         if len(self.absolute_plant_locations):
@@ -204,7 +212,7 @@ class CompatibleLeggedRobot(LeggedRobot, ABC):
                 self.sim, env_lower, env_upper, int(np.sqrt(self.num_envs))
             )
             pos = self.env_origins[i].clone()
-            pos[:2] += torch_rand_float(-1.0, 1.0, (2, 1), device=self.device).squeeze(
+            pos[:2] += torch_rand_float(-0.0, 0.0, (2, 1), device=self.device).squeeze(
                 1
             )
             start_pose.p = gymapi.Vec3(*pos)
@@ -231,12 +239,12 @@ class CompatibleLeggedRobot(LeggedRobot, ABC):
             self.gym.set_actor_rigid_body_properties(
                 env_handle, actor_handle, body_props, recomputeInertia=True
             )
-            self.envs.append(env_handle)
-            self.actor_handles.append(actor_handle)
-
             # add static objects/ actors to environment
             # function is only
             self._place_static_objects(i, env_handle, robot_position=pos)
+
+            self.envs.append(env_handle)
+            self.actor_handles.append(actor_handle)
 
         self.feet_indices = torch.zeros(
             len(feet_names), dtype=torch.long, device=self.device, requires_grad=False
@@ -326,6 +334,10 @@ class CompatibleLeggedRobot(LeggedRobot, ABC):
 
         _root_states = self.root_states.clone()
         # TODO randomize object positions on every reset and not just during initialization
+        # for i, env_handle in enumerate(self.envs):
+        #     pass  # self._place_static_objects(i, env_handle, robot_position=self.env_origins[i].clone(), replace=True)
+
+
         reset_indices = utils.get_reset_indices(env_ids, self.num_objects)
 
         self.root_states_complete[reset_indices] = self.root_states_initialization[

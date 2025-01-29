@@ -32,10 +32,10 @@ class GO2DefaultCfg(LeggedRobotCfg):
     class control(LeggedRobotCfg.control):
         # PD Drive parameters:
         control_type = "P"
-        stiffness = {"joint": 20.0}  # [N*m/rad]
+        stiffness = {"joint": 25.0}  # [N*m/rad]
         damping = {"joint": 0.5}  # [N*m*s/rad]
         # action scale: target angle = actionScale * action + defaultAngle
-        action_scale = 0.25
+        action_scale = 0.225
         # decimation: Number of control action updates @ sim DT per policy DT
         decimation = 4
 
@@ -52,7 +52,7 @@ class GO2DefaultCfg(LeggedRobotCfg):
         base_height_target = 0.25
 
         class scales(LeggedRobotCfg.rewards.scales):
-            torques = -0.0002
+            torques = -0.002  # 2
             dof_pos_limits = -10.0
 
     # for language server purposes (the selected scene config is added automatically)
