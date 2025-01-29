@@ -236,10 +236,10 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         #                      torch.ones_like(plant_distances).float().to(self.device),
         #                      - 0.1 * torch.ones_like(plant_distances).float().to(self.device)).float() * 0.1,
         #                   plant_probability.float()).float()
-        reward = (self.plant_distances_prev.float()-plant_distances.float()) * 10.  # , plant_probability.float()).float()
-        reward += torch.exp(-plant_distances.float() * 5.).float()
-        reward = reward / torch.abs(reward + 0.01)**0.25
-        reward = torch.tanh(reward)
+        # reward = (self.plant_distances_prev.float()-plant_distances.float()) * 10.  # , plant_probability.float()).float()
+        reward = torch.exp(-plant_distances.float() * 5.).float()
+        # reward = reward / torch.abs(reward + 0.01)**0.25
+        # reward = torch.tanh(reward)
         self.plant_distances_prev = plant_distances
         if torch.rand(1) < 0.01:
             print("_reward_plant_closeness_", reward[0])
@@ -268,11 +268,11 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         # reward_ = (torch.where(plant_angles < self.plant_angles_prev - threshold_for_static_reward,
         #     torch.ones_like(plant_angles).float().to(self.device), - 0.1 * torch.ones_like(plant_angles).float().to(self.device))
         #           * 0.1).float()
-        reward = (torch.abs(self.plant_angles_prev.float())-torch.abs(plant_angles.float()).float()) * 10.
-        reward += torch.exp(-torch.abs(plant_angles).float()*10.).float().to(self.device).float()
+        # reward = (torch.abs(self.plant_angles_prev.float())-torch.abs(plant_angles.float()).float()) * 10.
+        reward = torch.exp(-torch.abs(plant_angles).float()*10000.).float().to(self.device).float()
         # torch.clamp(reward+(plant_angles < threshold_for_static_reward).int().float(), min=0.0, max=1.0)
-        reward = reward / torch.abs(reward + 0.01)**0.25
-        reward = torch.tanh(reward)
+        # reward = reward / torch.abs(reward + 0.01)**0.25
+        # reward = torch.tanh(reward)
         self.plant_angles_prev = plant_angles
         if torch.rand(1) < 0.01:
             print("_reward_plant_ahead_", reward[0])
