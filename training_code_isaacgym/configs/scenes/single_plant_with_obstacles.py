@@ -49,4 +49,4 @@ class SinglePlantWithObstaclesCfg(BaseSceneCfg):
             size=(0.5, 0.5, 0.5),
         ),
     ]
-    size = 4.0
+    size = 5.0
