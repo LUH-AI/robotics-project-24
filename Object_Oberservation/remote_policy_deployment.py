@@ -270,6 +270,7 @@ def main():  # noqa: D103
                 object_detection_output = torch.tensor([closest_pot[0], closest_pot[1] * torch.exp(-closest_pot[0]),
                                            torch.exp(-closest_pot[0])])
 
+
             observable_depth_information = torch.ones(12).float()
             observations = torch.cat(object_detection_output,
                             torch.tanh(observable_depth_information),
