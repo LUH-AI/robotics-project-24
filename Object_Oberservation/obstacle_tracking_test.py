@@ -6,7 +6,7 @@ from PIL import Image
 import matplotlib.pyplot as plt
 import time
 
-OBSTACLE_THRESHOLD = 200
+OBSTACLE_THRESHOLD = 3000
 OBSTACLE_VALUE = 0.5
 
 
@@ -35,8 +35,8 @@ def estimate_depth(image_path, model, device):
         ).squeeze()
 
     # Convert depth map to numpy array
-    depth_map = depth.cpu().numpy()
-    depth_map_normalized = cv2.normalize(depth_map, None, 0, 255, cv2.NORM_MINMAX, dtype=cv2.CV_8U)
+    depth_map_normalized = depth.cpu().numpy()
+    #depth_map_normalized = cv2.normalize(depth_map, None, 0, 255, cv2.NORM_MINMAX, dtype=cv2.CV_8U)
 
     return depth_map_normalized
 
@@ -83,11 +83,14 @@ def main():
     depth_map = depth_map[hight//3:2*(hight//3), :] #trim the first and last third of the image by height
     distance_points = [depth_map[:, i*(width//12):(i+1)*(width//12)] for i in range(0,12)] #devide the image into 12 parts by width
     distance_points = [item.max() for item in distance_points]  #find the minimum depth/maximum value in each part
-    distance_points = [OBSTACLE_VALUE if i < OBSTACLE_THRESHOLD else 1 for i in distance_points]
+    distance_points = [1 if i < OBSTACLE_THRESHOLD else 0.5 for i in distance_points]
     print(distance_points)
 
     # Load the original image for display
     original_image = cv2.cvtColor(cv2.imread(image_path), cv2.COLOR_BGR2RGB)
+    
+    for i in range(0, 12):
+        depth_map[:, i*(width//12):i*(width//12)+5].fill(0)
 
     # Plot the original image and depth map side by side
     plt.figure(figsize=(12, 6))

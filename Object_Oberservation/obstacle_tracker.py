@@ -1,26 +1,26 @@
 import torch
 import cv2
 import numpy as np
-from torchvision.transforms import Compose, Normalize, ToTensor
+from torchvision.transforms import Compose, ToTensor
 from PIL import Image
 import time
 
 
 class ObstacleTracker:
-    def __init__(self, model_path, device, obstacle_threshold=200, obstacle_value=1, not_obstacle_value=0.5):
+    def __init__(self, model_path, device, obstacle_threshold=3000, obstacle_value=1, not_obstacle_value=0.5):
         self.obstacle_threshold = obstacle_threshold
         self.obstacle_value = obstacle_value
         self.not_obstacle_value = not_obstacle_value
         self.device = device
 
         self.transform = Compose([
-            ToTensor(),
-            #Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
+            ToTensor()
         ])
 
         self.model = self.load_model(model_path, device)
 
     def load_model(self, model_path, device):
+        """Load the MiDaS model from the given path."""
         model = torch.hub.load("intel-isl/MiDaS", "MiDaS")
         model.load_state_dict(torch.load(model_path, map_location=device))
         model.to(device)
@@ -28,6 +28,7 @@ class ObstacleTracker:
         return model
     
     def resize_image(self, image, target_divisor=32):
+        """Resize an image to dimensions operatable by the modle."""
         # Resize image to dimensions divisible by 32
         width, height = image.size
         new_width = (width // target_divisor) * target_divisor
@@ -35,6 +36,7 @@ class ObstacleTracker:
         return image.resize((new_width, new_height), Image.LANCZOS)
     
     def estimate_depth(self, image):
+        """Estimate the depth map of the input image."""
         # Load the input image
         image = self.resize_image(image)
         input_image = self.transform(image).unsqueeze(0)
@@ -52,9 +54,8 @@ class ObstacleTracker:
 
         # Convert depth map to numpy array
         depth_map = depth.cpu().numpy()
-        depth_map_normalized = cv2.normalize(depth_map, None, 0, 255, cv2.NORM_MINMAX, dtype=cv2.CV_8U)
 
-        return depth_map_normalized
+        return depth_map
     
     def formate_depth_estimate(self, depth_map):
         hight, width = depth_map.shape
@@ -69,7 +70,6 @@ class ObstacleTracker:
 
 
 def main():
-    image_path = "Object_Oberservation/Test_Image.jpeg"  # Input image
     model_path = "Object_Oberservation/model-f6b98070.pt"  # MiDaS model file
 
     images = ["Object_Oberservation/Data/Test/image_0.jpg", 
