@@ -6,7 +6,7 @@ from isaacgym.torch_utils import *
 
 from legged_gym.utils.task_registry import task_registry
 
-from ..configs.robots import GO2DefaultCfg
+from ..configs.robots import GO2DefaultCfg, GO2HighLevelPlantPolicyCfg
 from ..configs.scenes import BaseSceneCfg
 from ..configs.algorithms import PPODefaultCfg
 from .compatible_legged_robot import CompatibleLeggedRobot
@@ -79,7 +79,7 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
 
         super().__init__(cfg, sim_params, physics_engine, sim_device, headless)
         # for language server purposes only
-        self.cfg: GO2DefaultCfg = self.cfg
+        self.cfg: GO2HighLevelPlantPolicyCfg = self.cfg
 
         # Load low-level policy
         self.low_level_policy = utils.load_low_level_policy(cfg, sim_device)
@@ -97,7 +97,7 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         self.camera_props.height = camera.height
         self.camera_props.enable_tensors = camera.enable_tensors
         self.camera_props.use_collision_geometry = True
-        self.half_image_idx = camera.height // 2
+        self.third_image_index = camera.height // 3
 
 
     def _init_buffers(self):
@@ -192,11 +192,12 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         ])
         self.gym.end_access_image_tensors(self.sim)
         # USE DEPTH INFORMATION TO CALCULATE UPPER AND LOWER IMAGE MIN VALUE
-        upper_image_min = depth_information[:, :self.half_image_idx, :].min(dim=1).values
-        lower_image_min = depth_information[:, self.half_image_idx:, :].min(dim=1).values
-        observable_depth_information = torch.cat((upper_image_min, lower_image_min), dim=1)
-        self.obs_buf = torch.cat((self.base_lin_vel * self.obs_scales.lin_vel,
-                                  self.projected_gravity,
+        # upper_image_min = depth_information[:, :self.half_image_idx, :].min(dim=1).values
+        # lower_image_min = depth_information[:, self.half_image_idx:, :].min(dim=1).values
+        third_image = depth_information[:, self.third_image_index:2*self.third_image_index, :].min(dim=1).values
+        observable_depth_information = torch.tanh(third_image)
+        self.obs_buf = torch.cat((#self.base_lin_vel * self.obs_scales.lin_vel,
+                                  #self.projected_gravity,
                                   plant_probability,
                                   torch.mul(plant_distances, plant_probability),
                                   torch.mul(plant_angles, plant_probability),
@@ -297,12 +298,13 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         """
 
         bounded_high_level_actions = torch.tanh(high_level_actions)
-
-        self.compute_low_level_observations(bounded_high_level_actions)
         self.high_level_actions = bounded_high_level_actions
 
-        actions = self.low_level_policy.act_inference(self.low_level_obs_buf)
-        return super().step(actions)
+        for _ in range(self.cfg.low_level_policy.steps_per_high_level_action):
+            self.compute_low_level_observations(bounded_high_level_actions)
+            actions = self.low_level_policy.act_inference(self.low_level_obs_buf)
+            info = super().step(actions)
+        return info
 
     def _create_envs(self):
         super()._create_envs()

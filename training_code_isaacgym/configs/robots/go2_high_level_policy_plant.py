@@ -15,10 +15,11 @@ class GO2HighLevelPlantPolicyCfg(GO2DefaultCfg):
         path = Path(__file__).parents[1] / "models" / "model.pt"
         num_observations = 48
         num_actions = 12
+        steps_per_high_level_action = 4
 
     class env(GO2DefaultCfg.env):
         num_envs = 64
-        num_observations = 9 + 12 * 2  # [TODO: this is not properly set]
+        num_observations = 3 + 12  # [TODO: this is not properly set]
         num_privileged_obs = None  # if not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned otherwise
         num_actions = 3  # [TODO: this is not properly set]
         episode_length_s = 8  # episode length in seconds
