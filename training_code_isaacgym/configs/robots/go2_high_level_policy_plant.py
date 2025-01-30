@@ -21,11 +21,16 @@ class GO2HighLevelPlantPolicyCfg(GO2DefaultCfg):
         num_envs = 64
         num_observations = 3 + 12  # [TODO: this is not properly set]
         num_privileged_obs = None  # if not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned otherwise
-        num_actions = 3  # [TODO: this is not properly set]
+        num_actions = 3
         episode_length_s = 8  # episode length in seconds
 
     class init_state(GO2DefaultCfg.init_state):
         pos = [0.0, 0.0, 0.42]  # x,y,z [m]
+        random_rotation = True
+        maximum_location_offset = 0.0 # Works but might result in collisions with other objects on reset
+
+    class domain_rand(GO2DefaultCfg.domain_rand):
+        push_robots = False
 
     class rewards(GO2DefaultCfg.rewards):
         # Parameters for custom rewards HERE

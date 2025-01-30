@@ -318,6 +318,16 @@ class CompatibleLeggedRobot(LeggedRobot, ABC):
             )  # xy position within 1m of the center
         else:
             self.root_states[env_ids] = self.base_init_state
+
+            if getattr(self.cfg.init_state, "random_rotation", False):
+                axis_angles = torch.zeros((len(env_ids), 3), device=self.device)
+                axis_angles[:, 2].uniform_(0, 2 * torch.pi)
+                self.root_states[env_ids, 3:7] = utils.axis_angle_to_quaternion(axis_angles)
+
+            # TODO prevent collisions
+            max_location_offset = getattr(self.cfg.init_state, "maximum_location_offset", 0.0)
+            self.root_states[env_ids, :2] += torch_rand_float(-max_location_offset, max_location_offset, (len(env_ids), 2), device=self.device)
+
             self.root_states[env_ids, :3] += self.env_origins[env_ids]
         # base velocities
         self.root_states[env_ids, 7:13] = torch_rand_float(
