@@ -26,7 +26,7 @@ from download import download_model
 from obstacle_tracker import ObstacleTracker
 
 # Download des MiDaS-Modell
-download_model("depth_model.pt", "https://github.com/intel-isl/MiDaS/releases/download/v2_1/model-f6b98070.pt")
+download_model("https://github.com/intel-isl/MiDaS/releases/download/v2_1/model-f6b98070.pt", "depth_model.pt")
 
 # Konfiguration
 device = "cuda" if torch.cuda.is_available() else "cpu"
