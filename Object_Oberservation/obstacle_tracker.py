@@ -55,9 +55,10 @@ class ObstacleTracker:
         # Convert depth map to numpy array
         depth_map = depth.cpu().numpy()
 
-        return depth_map
+        return self.formate_depth_estimate(depth_map)
     
     def formate_depth_estimate(self, depth_map):
+        #print(depth_map)
         hight, width = depth_map.shape
         depth_map = depth_map[hight//3:2*(hight//3), :] #trim the first and last third of the image by height
         distance_points = [depth_map[:, i*(width//12):(i+1)*(width//12)] for i in range(0,12)]  #devide the image into 12 parts by width
@@ -92,8 +93,7 @@ def main():
         # Perform depth estimation
         image = Image.open(img_path).convert("RGB")
         depth_map = model.estimate_depth(image)
-        distance_points = model.formate_depth_estimate(depth_map)
-        print(distance_points)
+        print(depth_map)
     print(f"Time taken: {time.time() - start_time:.2f} seconds")
 
 if __name__ == "__main__":
