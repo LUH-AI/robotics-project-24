@@ -6,6 +6,7 @@ import signal
 import sys
 import time
 
+from PIL import Image
 import cv2
 import numpy as np
 import torch
@@ -228,7 +229,8 @@ def main():  # noqa: D103
             image = cv2.imdecode(image_data, cv2.IMREAD_COLOR)
             #out.write(image) # Hier oben, damit keine Bounding Boxen im Bild sind
 
-
+            depth = depth_model.estimate_depth(image=Image.fromarray(image))
+            print("DEPTH", depth)
             # Prediction durchführen
             results = model(image, verbose=False)
             plants = []
