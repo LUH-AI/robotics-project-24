@@ -18,8 +18,8 @@ class GO2HighLevelPlantPolicyCfg(GO2DefaultCfg):
         steps_per_high_level_action = 4
 
     class env(GO2DefaultCfg.env):
-        num_envs = 64
-        num_observations = 3 + 12  # [TODO: this is not properly set]
+        num_envs = 128
+        num_observations = 3 + 12
         num_privileged_obs = None  # if not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned otherwise
         num_actions = 3
         episode_length_s = 8  # episode length in seconds
@@ -34,13 +34,14 @@ class GO2HighLevelPlantPolicyCfg(GO2DefaultCfg):
 
     class rewards(GO2DefaultCfg.rewards):
         # Parameters for custom rewards HERE
+        only_positive_rewards = False # if true negative total rewards are clipped at zero (avoids early termination problems)
 
         class scales():
             # only rewards that have a scale will be added (reward is named "_reward_{SCALE_NAME}")
-            plant_closeness = 2.0
-            plant_ahead = 1.0
+            plant_closeness = 3.0
+            plant_ahead = 1.5
             obstacle_closeness = 0.0
-            minimize_rotation = 0.
+            minimize_rotation = 0.3
 
     # robot camera:
     class camera:
