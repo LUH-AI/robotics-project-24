@@ -22,9 +22,16 @@ from unitree_sdk2py.go2.video.video_client import VideoClient
 from unitree_sdk2py.idl.sensor_msgs.msg.dds_ import PointCloud2_
 from unitree_sdk2py.idl.unitree_go.msg.dds_ import LowState_
 
+from download import download_model
+from obstacle_tracker import ObstacleTracker
+
+# Download des MiDaS-Modell
+download_model("depth_model.pt", "https://github.com/intel-isl/MiDaS/releases/download/v2_1/model-f6b98070.pt")
+
 # Konfiguration
 device = "cuda" if torch.cuda.is_available() else "cpu"
 model_path = "./runs/detect/train/weights/best.pt"  # Pfad zum trainierten YOLO-Modell
+depth_model_path = "./depth_model.pt"  # Pfad zum MiDaS-Modell
 dataset_path = "./Data/Test/Test_plant.v1i.yolov11/test"  # Pfad zum Test-Datensatz
 images_path = os.path.join(dataset_path, "images")
 
@@ -151,6 +158,8 @@ def main():  # noqa: D103
     signal.signal(signal.SIGINT, sigint_handler)
     # YOLO-Modell laden
     model = YOLO(model_path)
+    # Tiefenmodell laden
+    depth_model = ObstacleTracker(depth_model_path, device)
 
     # Roboterposition (unten in der Mitte der Karte)
     robot_position = (int(map_size/2), int(map_size)-50)
