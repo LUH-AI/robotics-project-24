@@ -32,6 +32,7 @@ images_path = os.path.join(dataset_path, "images")
 conf_threshold = 0.5
 real_pot_width_cm = 20  # Breite des Topfes in cm
 focal_length = 1200  # Beispielwert für die Kamerafokallänge (angepasst an die Kalibrierung)
+focal_length_mask = 1200
 image_center_x = 640  # Beispielwert für Bildmitte in Pixeln (angepasst an die Kameradaten)
 field_of_view = 120  # Sichtfeld der Kamera in Grad
 
@@ -88,11 +89,14 @@ def lidar_cloud_message_handler(msg: PointCloud2_):
     cv2.imshow("Lidar", image)
 
 
-def calculate_distance(pot_width_pixels):
+def calculate_distance(pot_width_pixels, mask=False):
     """Berechnet die Entfernung anhand der Breite des Topfes in Pixeln."""
     if pot_width_pixels == 0:
         return float('inf')
-    return (real_pot_width_cm * focal_length) / pot_width_pixels
+    if mask:
+        return (real_pot_width_cm * focal_length_mask) / pot_width_pixels
+    else:
+        return (real_pot_width_cm * focal_length) / pot_width_pixels
 
 def calculate_angle(x_center, image_width):
     """Berechnet den Winkel eines Objekts relativ zur Bildmitte."""
@@ -238,7 +242,7 @@ def main():  # noqa: D103
                         if cls == 1:  # Klasse 0 ist der Blumentopf (angepasst an die Klassendefinition)
                             cropped_image = image[int(y1):int(y2), int(x1):int(x2)]
                             gray = cv2.cvtColor(cropped_image, cv2.COLOR_BGR2GRAY)
-                            threshold = 80  # Werte über 200 gelten als weiß
+                            threshold = 100  # Werte über 200 gelten als weiß
 
                             _, binary = cv2.threshold(gray, threshold, 255, cv2.THRESH_BINARY)
                             cv2.imshow("Binary",binary)
@@ -265,7 +269,7 @@ def main():  # noqa: D103
 
                             cv2.imshow("Cropped Image",cropped_image)
 
-                            distance = calculate_distance(pot_width_pixels)
+                            distance = calculate_distance(pot_width_pixels, mask=True)
                             pot_positions.append((distance, angle))
                             if distance < closest_pot[0]:
                                 closest_pot = [distance, angle]
