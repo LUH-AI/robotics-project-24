@@ -59,7 +59,7 @@ def load_model(model_path):
 
 
 def main():
-    image_path = "Object_Oberservation/Test_Image.jpeg"  # Input image
+    image_path = "Object_Oberservation/Test_image.jpeg"  # Input image
     model_path = "Object_Oberservation/model-f6b98070.pt"  # MiDaS model file
 
     images = ["Object_Oberservation/Data/Test/image_0.jpg", 
