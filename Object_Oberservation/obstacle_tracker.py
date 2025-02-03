@@ -4,10 +4,11 @@ import numpy as np
 from torchvision.transforms import Compose, ToTensor
 from PIL import Image
 import time
+from download import download_model
 
 
 class ObstacleTracker:
-    def __init__(self, model_path, device, obstacle_threshold=3000, obstacle_value=1, not_obstacle_value=0.5):
+    def __init__(self, model_path, device, obstacle_threshold=2800, obstacle_value=1, not_obstacle_value=0.5):
         self.obstacle_threshold = obstacle_threshold
         self.obstacle_value = obstacle_value
         self.not_obstacle_value = not_obstacle_value
@@ -71,18 +72,21 @@ class ObstacleTracker:
 
 
 def main():
-    model_path = "Object_Oberservation/model-f6b98070.pt"  # MiDaS model file
+    # Download des MiDaS-Modell
+    download_model("https://github.com/intel-isl/MiDaS/releases/download/v2_1/model-f6b98070.pt", "depth_model.pt")
 
-    images = ["Object_Oberservation/Data/Test/image_0.jpg", 
-              "Object_Oberservation/Data/Test/image_1.jpg", 
-              "Object_Oberservation/Data/Test/image_2.jpg", 
-              "Object_Oberservation/Data/Test/image_3.jpg", 
-              "Object_Oberservation/Data/Test/image_4.jpg", 
-              "Object_Oberservation/Data/Test/image_5.jpg", 
-              "Object_Oberservation/Data/Test/image_6.jpg", 
-              "Object_Oberservation/Data/Test/image_7.jpg", 
-              "Object_Oberservation/Data/Test/image_8.jpg", 
-              "Object_Oberservation/Data/Test/image_9.jpg"]
+    model_path = "./depth_model.pt"  # MiDaS model file
+
+    images = ["./Data/Test/image_0.jpg", 
+              "./Data/Test/image_1.jpg", 
+              "./Data/Test/image_2.jpg", 
+              "./Data/Test/image_3.jpg", 
+              "./Data/Test/image_4.jpg", 
+              "./Data/Test/image_5.jpg", 
+              "./Data/Test/image_6.jpg", 
+              "./Data/Test/image_7.jpg", 
+              "./Data/Test/image_8.jpg", 
+              "./Data/Test/image_9.jpg"]
 
     # Load the model
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
