@@ -22,6 +22,7 @@ from unitree_sdk2py.go2.video.video_client import VideoClient
 from unitree_sdk2py.idl.sensor_msgs.msg.dds_ import PointCloud2_
 from unitree_sdk2py.idl.unitree_go.msg.dds_ import LowState_
 from unitree_sdk2py.idl.unitree_go.msg.dds_ import LowState_
+# from training_code_isaacgym.environments import utils
 
 # from training_code_isaacgym.environments import utils
 
@@ -292,6 +293,7 @@ def main():  # noqa: D103
             print("observations", observations.shape)
             commands = module.act_inference(observations.float())
             commands = torch.tanh(commands) * 0.2
+
             print("actions", commands.shape)
 
             high_level_actions_prev2 = high_level_actions_prev1
@@ -299,6 +301,7 @@ def main():  # noqa: D103
             print("commands: " + str(commands[0]) + ", " + str(commands[1]) + ", " + str(commands[2]))
 
             code = obstacle_avoid_client.Move(commands[0].tolist(), commands[1].tolist(), commands[2].tolist())
+
             print("Apply action", code)
             time.sleep(0.5)
             code = obstacle_avoid_client.Move(0, 0, 0)
@@ -309,6 +312,7 @@ def main():  # noqa: D103
                 # sport_client.Move(0,0,0)# Hier ggf den Roboter drehen lassen bis er was erkennt
                 code = obstacle_avoid_client.Move(0, 0, 0)
                 print("NIX ERKANNT", code)
+
             else:
                 print("Distance: ", closest_pot[0], "ANGLE: ", closest_pot[1])
                 if abs(closest_pot[1]) < 20:

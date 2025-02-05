@@ -7,3 +7,5 @@ __pycache__/
 
 *.jpg
 *.mp4
+
+logs/
