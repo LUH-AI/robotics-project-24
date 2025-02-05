@@ -90,6 +90,8 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
 
         # Make the past action visible to the high level agent
         self.past_actions = torch.zeros((self.num_envs, 3)).to(self.device)
+        # Use the one from even before for action "smoothness" based rewards
+        self.past_actions_prev = torch.zeros((self.num_envs, 3)).to(self.device)
 
 
     def _prepare_camera(self, camera):
@@ -159,6 +161,7 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
             high_level_actions (torch.Tensor): Tensor of shape (num_envs, num_actions_per_env)
         """
         # Base observation components combined with plant-related features
+        self.past_actions_prev = self.past_actions
         self.past_actions = high_level_actions
         self.low_level_obs_buf = torch.cat(
             (
@@ -248,46 +251,38 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
 
     # add custom rewards... here (use your robot_cfg for control)
     def _reward_sanity_check(self):
-        # Tracking of angular velocity commands (yaw)
-        # Provide slight reward for moving ahead
+        # Just a simple sanity check rewarding fast rotation
         ang_vel_error = torch.square(1.0 - self.base_ang_vel[:, 2])  # base_ang_vel
         return torch.exp(-ang_vel_error / self.cfg.rewards.tracking_sigma)
 
     def _reward_minimal_policy(self):
-        # Tracking of angular velocity commands (yaw)
-        # Provide slight reward for moving ahead
+        # Just penalize all movement slightly to minimize unnecessary navigation
         ang_vel_error = torch.square(self.base_ang_vel[:, 2])
         lin_vel_error = torch.square(self.base_lin_vel[:, :2]).mean(dim=1)
         return ang_vel_error + lin_vel_error + 0.05
 
-    def _reward_smooth_commands(self, threshold=0.25):
+    def _reward_smooth_commands(self, threshold=0.2):
         # Difference between subsequent policies should below a threshold of 0.2
         difference_in_commands = torch.abs(
-            self.high_level_actions_prev1.float() - self.high_level_actions_prev2.float())
+            self.past_actions.float() - self.past_actions_prev.float())
         difference_in_commands_with_threshold = torch.where(difference_in_commands > threshold,
                                                             (difference_in_commands - threshold).float(), 0.0).float()
         return difference_in_commands_with_threshold.mean(dim=1)
 
-    def _reward_plant_closeness(self):
-        # Tracking of angular velocity commands (yaw)
+    def _reward_plant_closeness(self, threashold=0.):
+        # Calculate plant closeness based reward
         plants_across_envs = [obj["plants"] for obj in self.detected_objects]
-
-        # TODO: improve reward
         plant_probability = utils.convert_object_property(plants_across_envs, "probability", self.device)
         plant_distances = utils.convert_object_property(plants_across_envs, "distance", self.device)
-
-        # combined_reward = torch.exp(-plant_distances) * plant_probability
-        # combined_reward += 10 * torch.exp(-plant_distances * 10.) * plant_probability
-
-        # combined_reward = torch.mul(torch.exp(-plant_distances.float() ** 2).float(), plant_probability)
-        combined_reward = (torch.exp(-plant_distances.float() * 2.5).float() +
-                           torch.exp(-plant_distances.float() * 25.).float())
+        plant_distances_ = torch.where(plant_distances > threashold, plant_distances,
+                                       threashold + (threashold - plant_distances))
+        combined_reward = (torch.exp(-plant_distances_.float() * 2.5).float() +
+                           torch.exp(-plant_distances_.float() * 25.).float())
         return torch.mul(combined_reward, plant_probability)
 
     def _reward_plant_ahead(self):
-        # Tracking of angular velocity commands (yaw)
+        # Calculate the angle based reward
         plants_across_envs = [obj["plants"] for obj in self.detected_objects]
-        # TODO: improve reward
         plant_probability = utils.convert_object_property(plants_across_envs, "probability", self.device)
         plant_angles = utils.convert_object_property(plants_across_envs, "angle", self.device)
         reward = (torch.exp(-torch.abs(plant_angles).float() * 100.).float().to(self.device).float() +
@@ -295,10 +290,10 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         return torch.mul(reward, plant_probability)
 
     def _reward_obstacle_closeness(self):
-        # Tracking of angular velocity commands (yaw)
+        # Calculate obstacle closeness based "reward"
         obstacles_across_envs = [obj["obstacles"] for obj in self.detected_objects]
-
-        # TODO: improve reward
+        if len(obstacles_across_envs) < 1:
+            return torch.zeros((self.num_envs, 3)).to(self.device)
         obstacle_probability = utils.convert_object_property(obstacles_across_envs, "probability", self.device)
         obstacle_distances = utils.convert_object_property(obstacles_across_envs, "distance", self.device)
         obstacle_angles = utils.convert_object_property(obstacles_across_envs, "angle", self.device)

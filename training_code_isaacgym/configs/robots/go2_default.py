@@ -35,7 +35,7 @@ class GO2DefaultCfg(LeggedRobotCfg):
         stiffness = {"joint": 20.0}  # [N*m/rad]
         damping = {"joint": 0.5}  # [N*m*s/rad]
         # action scale: target angle = actionScale * action + defaultAngle
-        action_scale = 0.25
+        action_scale = 0.225
         # decimation: Number of control action updates @ sim DT per policy DT
         decimation = 4
 

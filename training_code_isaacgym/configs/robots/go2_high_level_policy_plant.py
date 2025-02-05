@@ -33,10 +33,11 @@ class GO2HighLevelPlantPolicyCfg(GO2DefaultCfg):
         class scales():
             # only rewards that have a scale will be added (reward is named "_reward_{SCALE_NAME}")
             # sanity_check = 10.
-            plant_closeness = 2.0
-            plant_ahead = 1.0
-            obstacle_closeness = 0.0  # TODO or -10 from upper values
-            minimize_rotation = 0.
+            plant_closeness = 10.0
+            plant_ahead = 10.0
+            obstacle_closeness = 0.  # TODO or -10 from upper values
+            minimal_policy = 0.  # 1
+            smooth_commands = 0.  # 1
 
     # robot camera:
     class camera:
