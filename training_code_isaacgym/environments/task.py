@@ -98,6 +98,7 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         self.camera_props.enable_tensors = camera.enable_tensors
         self.camera_props.use_collision_geometry = True
         self.third_image_index = camera.height // 3
+        self.split_width_indices = torch.linspace(0, camera.width, camera.split_to_width + 1, dtype=torch.long)
 
 
     def _init_buffers(self):
@@ -195,6 +196,12 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         # upper_image_min = depth_information[:, :self.half_image_idx, :].min(dim=1).values
         # lower_image_min = depth_information[:, self.half_image_idx:, :].min(dim=1).values
         third_image = depth_information[:, self.third_image_index:2*self.third_image_index, :].min(dim=1).values
+        third_image = torch.stack(
+            [
+                third_image[:, self.split_width_indices[i]:self.split_width_indices[i+1]].min(dim=1).values
+                for i in range(self.cfg.camera.split_to_width)
+            ]
+        ).transpose(0,1)
         observable_depth_information = torch.tanh(third_image)
         self.obs_buf = torch.cat((#self.base_lin_vel * self.obs_scales.lin_vel,
                                   #self.projected_gravity,
