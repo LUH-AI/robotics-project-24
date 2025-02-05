@@ -82,7 +82,7 @@ def validate_location(
     Returns:
         bool: True if no collision found else False
     """
-    if (torch.abs((location - robot_location)[:2]) < 2.5).any():  # TODO size of robot
+    if (torch.abs((location - robot_location)[:2]) < 0.8).any():  # TODO size of robot
         return False
     for other_location, other_size in zip(other_object_locations, other_object_sizes):
         if (
