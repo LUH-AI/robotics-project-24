@@ -26,6 +26,33 @@ from unitree_sdk2py.idl.unitree_go.msg.dds_ import LowState_
 from download import download_model
 from obstacle_tracker import ObstacleTracker
 
+
+"""
+in cm bei focallength 1200 für beide
+schwarzer Boden und schwarzer Hintergrund
+Echte Distanz   BB  Mask 
+50 61 61
+75  83  83
+100 105 105
+125 129 130
+150 150 150
+175 171 173
+200 195 200
+250 238 240
+300 270 275
+
+in cm bei focallength 1200 für beide
+weißer Boden und weißer Hintergrund
+Echte Distanz   BB  Mask 
+50 67 58
+75  93 90
+100 108 107
+125 130 130
+150 153 152
+175 170 175
+200 213 210
+"""
+
 # Download des MiDaS-Modell
 download_model("https://github.com/intel-isl/MiDaS/releases/download/v2_1/model-f6b98070.pt", "depth_model.pt")
 
@@ -227,10 +254,12 @@ def main():  # noqa: D103
             # Convert to numpy image
             image_data = np.frombuffer(bytes(data), dtype=np.uint8)
             image = cv2.imdecode(image_data, cv2.IMREAD_COLOR)
+            print(image.shape)
             #out.write(image) # Hier oben, damit keine Bounding Boxen im Bild sind
 
-            depth = depth_model.estimate_depth(image=Image.fromarray(image))
-            print("DEPTH", depth)
+            #depth = depth_model.estimate_depth(image=Image.fromarray(image))
+            #print("DEPTH", depth)
+            
             # Prediction durchführen
             results = model(image, verbose=False)
             plants = []
@@ -253,7 +282,7 @@ def main():  # noqa: D103
                         if cls == 1:  # Klasse 0 ist der Blumentopf (angepasst an die Klassendefinition)
                             cropped_image = image[int(y1):int(y2), int(x1):int(x2)]
                             gray = cv2.cvtColor(cropped_image, cv2.COLOR_BGR2GRAY)
-                            threshold = 100  # Werte über 200 gelten als weiß
+                            threshold = 180  # Werte über 200 gelten als weiß
 
                             _, binary = cv2.threshold(gray, threshold, 255, cv2.THRESH_BINARY)
                             cv2.imshow("Binary",binary)
@@ -277,17 +306,17 @@ def main():  # noqa: D103
 
                                 pot_width_pixels = rightmost_pixel[1] - leftmost_pixel[1]
                                 print(pot_width_pixels, rightmost_pixel[1], leftmost_pixel[1])
-
                             cv2.imshow("Cropped Image",cropped_image)
 
                             distance = calculate_distance(pot_width_pixels, mask=True)
+                            distance_non_mask = calculate_distance(x2-x1, mask=False)
                             pot_positions.append((distance, angle))
                             if distance < closest_pot[0]:
                                 closest_pot = [distance, angle]
                             if len(white_pixel_positions) > 0:
-                                label = f"Class {int(cls)}: {confidence:.2f}, Distance {int(x2-x1)}, Mask-Distance:{int(distance)}"
+                                label = f"Class {int(cls)}: {confidence:.2f}, Distance {int(distance_non_mask)}, Mask-Distance:{int(distance)}"
                             else:
-                                label = f"Class {int(cls)}: {confidence:.2f}, Distance {int(distance)}"
+                                label = f"Class {int(cls)}: {confidence:.2f}, Distance {int(distance_non_mask)}"
                         else:
                             label = f"Class {int(cls)}: {confidence:.2f}"
                         color = (0, 255, 0)  # Grün
