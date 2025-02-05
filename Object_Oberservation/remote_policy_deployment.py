@@ -280,7 +280,7 @@ def main():  # noqa: D103
             observable_depth_information = torch.ones(12)
             object_detection_output = object_detection_output
             observations = torch.cat([object_detection_output,
-                                      torch.tanh(observable_depth_information),
+                                      observable_depth_information,  # torch.tanh(observable_depth_information),
                                       # high_level_actions_prev1,
                                       # high_level_actions_prev2
                                       ])
