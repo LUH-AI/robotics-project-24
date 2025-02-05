@@ -162,7 +162,7 @@ def main():  # noqa: D103
     # module = module.to(sim_device)
     import os
     # print("listdir", os.listdir("."))
-    checkpoint = torch.load("models/model_5000.pt", map_location=torch.device("cpu"))
+    checkpoint = torch.load("models/sinle_plant_v3_2450.pt", map_location=torch.device("cpu"))
     print("checkpoint loaded")
     # print("low level policy", module)
     model_state_dict = checkpoint.get('model_state_dict')
