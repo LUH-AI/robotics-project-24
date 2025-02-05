@@ -12,7 +12,7 @@ class GO2HighLevelPlantPolicyCfg(GO2DefaultCfg):
         file = str(Path(__file__).parents[2] / "assets/robots" / "go2_with_watering" / "urdf/go2.urdf")
 
     class low_level_policy:
-        path = Path(__file__).parents[1] / "models" / "model.pt"
+        path = Path(__file__).parents[2] / "models" / "low-level_policy" / "low_lvl_model.pt"
         num_observations = 48
         num_actions = 12
         steps_per_high_level_action = 4
