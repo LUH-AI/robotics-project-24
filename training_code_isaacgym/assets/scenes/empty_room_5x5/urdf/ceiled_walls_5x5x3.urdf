@@ -16,7 +16,7 @@
   </joint>
   <link name="wall_1">
     <collision name="ceiling_collision">
-      <origin rpy="0.00000 0.00000 0.00000" xyz="0.00000 0.00000 3.00000"/>
+      <origin rpy="0.00000 0.00000 0.00000" xyz="0.00000 0.00000 3.05000"/>
       <geometry>
         <box size="5.00000 5.00000 0.10000"/>
       </geometry>
@@ -24,14 +24,14 @@
     <collision name="wall_1_collision">
       <origin rpy="1.57080 0.00000 0.00000" xyz="2.50000 0.00000 1.50000"/>
       <geometry>
-        <box size="0.10000 3.00000 5.00000"/>
+        <box size="0.10000 3.00000 4.90000"/>
       </geometry>
     </collision>
     <visual name="wall_1_visual">
       <origin rpy="0.00000 0.00000 0.00000" xyz="2.50000 0.00000 0.50000"/>
       <material name="white.001"/>
       <geometry>
-        <box size="0.10000 5.00000 1.00000"/>
+        <box size="0.10000 4.90000 1.00000"/>
       </geometry>
     </visual>
   </link>
@@ -39,14 +39,14 @@
     <collision name="wall_2_collision">
       <origin rpy="0.00000 0.00000 0.00000" xyz="-2.50000 0.00000 1.50000"/>
       <geometry>
-        <box size="0.10000 5.00000 3.00000"/>
+        <box size="0.10000 4.90000 3.00000"/>
       </geometry>
     </collision>
     <visual name="wall_2_visual">
       <origin rpy="0.00000 0.00000 0.00000" xyz="-2.50000 0.00000 0.50000"/>
       <material name="white"/>
       <geometry>
-        <box size="0.10000 5.00000 1.00000"/>
+        <box size="0.10000 4.90000 1.00000"/>
       </geometry>
     </visual>
   </link>
@@ -54,14 +54,14 @@
     <collision name="wall_3_collision">
       <origin rpy="0.00000 0.00000 0.00000" xyz="0.00000 2.50000 1.50000"/>
       <geometry>
-        <box size="5.00000 0.10000 3.00000"/>
+        <box size="4.90000 0.10000 3.00000"/>
       </geometry>
     </collision>
     <visual name="wall_3_visual">
       <origin rpy="0.00000 0.00000 0.00000" xyz="0.00000 2.50000 0.50000"/>
       <material name="white.002"/>
       <geometry>
-        <box size="5.00000 0.10000 1.00000"/>
+        <box size="4.90000 0.10000 1.00000"/>
       </geometry>
     </visual>
   </link>
@@ -69,14 +69,14 @@
     <collision name="wall_4_collision">
       <origin rpy="0.00000 0.00000 0.00000" xyz="0.00000 -2.50000 1.50000"/>
       <geometry>
-        <box size="5.00000 0.10000 3.00000"/>
+        <box size="4.90000 0.10000 3.00000"/>
       </geometry>
     </collision>
     <visual name="wall_4_visual">
       <origin rpy="0.00000 0.00000 0.00000" xyz="0.00000 -2.50000 0.50000"/>
       <material name="white.003"/>
       <geometry>
-        <box size="5.00000 0.10000 1.00000"/>
+        <box size="4.90000 0.10000 1.00000"/>
       </geometry>
     </visual>
   </link>
