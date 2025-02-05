@@ -249,6 +249,18 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         plant_angles = utils.convert_object_property(plants_across_envs, "angle", self.device)
         return torch.exp(-torch.abs(plant_angles)) * plant_probability
 
+    def _reward_object_collision(self):
+        """Rewards collisions with obstacles, walls and plants.
+        Needs negative scaling for penalization
+
+        Does not include forces on z-axis and uses a baseline from self.reset_root_states() to tackle unexplained forces
+        Returns:
+            torch.Tensor: Summed absolute contact forces on object bodies
+        """
+        reward = torch.mean(torch.abs(self.object_forces[:, :, :2] - self.object_force_baseline[:, :, :2]))
+        #print(f"{reward=}")
+        return reward
+
     def _detect_objects(self):
         """Detects objects in the environment and classifies them into obstacles and plants/targets.
         Additionally, computes angle and distance from the robot to each detected object.
