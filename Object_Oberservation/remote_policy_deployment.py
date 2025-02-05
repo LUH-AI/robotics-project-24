@@ -40,11 +40,15 @@ field_of_view = 120  # Sichtfeld der Kamera in Grad
 
 map_size = 1000
 
+obstacle_avoid_client = None
 
 # Handler-Methode: Signal für KeyboardInterrupt abfangen
 def sigint_handler(signal, frame):
     """Keyboard Interrupt function."""
     print("--> KeyboardInterrupt abgefangen")
+    global obstacle_avoid_client
+    if obstacle_avoid_client is not None:
+        obstacle_avoid_client.Move(0,0,0.0)
     # Programm abbrechen, sonst läuft loop weiter
     sys.exit(0)
 
@@ -162,7 +166,7 @@ def main():  # noqa: D103
     # module = module.to(sim_device)
     import os
     # print("listdir", os.listdir("."))
-    checkpoint = torch.load("models/sinle_plant_v3_2450.pt", map_location=torch.device("cpu"))
+    checkpoint = torch.load("models/single_plant_v3_2450.pt", map_location=torch.device("cpu"))
     print("checkpoint loaded")
     # print("low level policy", module)
     model_state_dict = checkpoint.get('model_state_dict')
