@@ -197,6 +197,7 @@ def main():  # noqa: D103
         ChannelFactoryInitialize(0)
     """
     # urdf_loader = URDFLoader()
+    global obstacle_avoid_client
     obstacle_avoid_client = ObstaclesAvoidClient()
     obstacle_avoid_client.SetTimeout(3.0)
     obstacle_avoid_client.Init()

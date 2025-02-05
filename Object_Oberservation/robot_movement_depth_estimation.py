@@ -83,7 +83,8 @@ def sigint_handler(signal, frame):
     """Keyboard Interrupt function."""
     print ("--> KeyboardInterrupt abgefangen")
     global obstacle_avoid_client
-    obstacle_avoid_client.Move(0,0,0.0)
+    if obstacle_avoid_client is not None:
+        obstacle_avoid_client.Move(0,0,0.0)
     cv2.destroyAllWindows()
     #Programm abbrechen, sonst läuft loop weiter
     sys.exit(0)
