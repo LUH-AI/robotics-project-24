@@ -286,7 +286,7 @@ def main():  # noqa: D103
                                       ])
             print("observations", observations.shape)
             commands = module.act_inference(observations.float())
-            commands = torch.tanh(commands)
+            commands = torch.tanh(commands) * 0.2
             print("actions", commands.shape)
 
             high_level_actions_prev2 = high_level_actions_prev1
@@ -295,10 +295,10 @@ def main():  # noqa: D103
 
             code = obstacle_avoid_client.Move(commands[0].tolist(), commands[1].tolist(), commands[2].tolist())
             print("Apply action", code)
-            time.sleep(1)
+            time.sleep(0.5)
             code = obstacle_avoid_client.Move(0, 0, 0)
             print("Apply action", code)
-            time.sleep(1)
+            time.sleep(0.5)
             '''
             if closest_pot[1] is None:
                 # sport_client.Move(0,0,0)# Hier ggf den Roboter drehen lassen bis er was erkennt
