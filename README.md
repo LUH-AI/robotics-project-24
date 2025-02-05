@@ -52,7 +52,11 @@ Moreover, you can add further assets or change the robot behaviour of the low-le
 
 
 ## Inference
-TODO
+To view a policy/checkpoint you can use the `play.py` script:
+```
+python -m training_code_isaacgym.play path/to/your/checkpoint.pt
+```
+Additional arguments like `--num_envs` or `--scene` are the same as for the `train.py` script
 
 ## Deployment
 TODO
