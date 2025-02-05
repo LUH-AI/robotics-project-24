@@ -46,8 +46,9 @@ class GO2HighLevelPlantPolicyCfg(GO2DefaultCfg):
     # robot camera:
     class camera:
         horizontal_fov = 120
-        width = 12
-        height = 720
+        width = 128
+        height = 72
+        split_to_width = 12
         enable_tensors = True
         vec_from_body_center = gymapi.Vec3(0.34, 0, 0.021)  # Should be closest to reality: (0.34, 0, 0.021)m
         rot_of_camera = gymapi.Quat.from_axis_angle(
