@@ -39,6 +39,7 @@ def register_task(
     return name
 
 
+
 class CustomLeggedRobot(CompatibleLeggedRobot):
     def __init__(
         self, cfg: GO2DefaultCfg, sim_params, physics_engine, sim_device, headless
