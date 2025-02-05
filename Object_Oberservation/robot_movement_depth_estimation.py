@@ -73,7 +73,8 @@ field_of_view = 120  # Sichtfeld der Kamera in Grad
 
 map_size = 1000
 
-test_not_move_robot = True
+test_not_move_robot = False
+viz_dev_images=False
 
 obstacle_avoid_client = None
 
@@ -179,15 +180,16 @@ def update_local_map(robot_position, plants, pot_positions):
         #pot_y = max(0,min(500,pot_y))
         #print("Pot distance: ",distance, " Angle: ", angle, "X: ",pot_x," Y: ",pot_y)
         cv2.circle(map_image, (pot_x, pot_y), 5, (0, 0, 255), -1)  # Topf als roter Kreis
-
-    cv2.imshow("Lokale Karte", map_image)
+    if viz_dev_images:
+        cv2.imshow("Lokale Karte", map_image)
 
 def main():  # noqa: D103
+    start_time=time.time()
     signal.signal(signal.SIGINT, sigint_handler)
     # YOLO-Modell laden
     model = YOLO(model_path)
     # Tiefenmodell laden
-    depth_model = ObstacleTracker(depth_model_path, device)
+    #depth_model = ObstacleTracker(depth_model_path, device)
 
     # Roboterposition (unten in der Mitte der Karte)
     robot_position = (int(map_size/2), int(map_size)-50)
@@ -254,12 +256,11 @@ def main():  # noqa: D103
             # Convert to numpy image
             image_data = np.frombuffer(bytes(data), dtype=np.uint8)
             image = cv2.imdecode(image_data, cv2.IMREAD_COLOR)
-            print(image.shape)
             #out.write(image) # Hier oben, damit keine Bounding Boxen im Bild sind
 
             #depth = depth_model.estimate_depth(image=Image.fromarray(image))
             #print("DEPTH", depth)
-            
+
             # Prediction durchführen
             results = model(image, verbose=False)
             plants = []
@@ -285,7 +286,8 @@ def main():  # noqa: D103
                             threshold = 180  # Werte über 200 gelten als weiß
 
                             _, binary = cv2.threshold(gray, threshold, 255, cv2.THRESH_BINARY)
-                            cv2.imshow("Binary",binary)
+                            if viz_dev_images:
+                                cv2.imshow("Binary",binary)
                             height = binary.shape[0]
                             lower_third_start = int(height * (2 / 3))  # Start des unteren Drittels
 
@@ -306,10 +308,15 @@ def main():  # noqa: D103
 
                                 pot_width_pixels = rightmost_pixel[1] - leftmost_pixel[1]
                                 print(pot_width_pixels, rightmost_pixel[1], leftmost_pixel[1])
-                            cv2.imshow("Cropped Image",cropped_image)
+                            if viz_dev_images:
+                                cv2.imshow("Cropped Image",cropped_image)
 
                             distance = calculate_distance(pot_width_pixels, mask=True)
+
                             distance_non_mask = calculate_distance(x2-x1, mask=False)
+
+                            if distance_non_mask < 150:
+                                distance=distance_non_mask
                             pot_positions.append((distance, angle))
                             if distance < closest_pot[0]:
                                 closest_pot = [distance, angle]
@@ -327,34 +334,47 @@ def main():  # noqa: D103
             update_local_map(robot_position, plants, pot_positions)
             if closest_pot[1] is None:
                 #sport_client.Move(0,0,0)# Hier ggf den Roboter drehen lassen bis er was erkennt
+                print("NIX ERKANNT")
                 if not test_not_move_robot:
-                    code = obstacle_avoid_client.Move(0,0,0)
-                    print("NIX ERKANNT",code)
+                    obstacle_avoid_client.Move(0,0,0)
             else:
                 print("Distance: ",closest_pot[0],"ANGLE: ",closest_pot[1])
-                if abs (closest_pot[1]) < 20:
+                if abs (closest_pot[1]) < 5:
                     if closest_pot[0] > 60: #cm
                         #sport_client.Move(1.0,0,0)
                         if not test_not_move_robot:
-                            code = obstacle_avoid_client.Move(1.0,0,0)
-                            print("MOVE FORWARD",code)
+                            obstacle_avoid_client.Move(1.0,0,0)
+                            print("MOVE FORWARD")
                     else: #Hier ggf aufs Lidar wechseln
                         #sport_client.Move(0,0,0)
                         if not test_not_move_robot:
-                            code = obstacle_avoid_client.Move(0,0,0)
-                            print("STOP BECAUSE TOO CLOSE",code)
+                            print("Wait for standstill")
+                            obstacle_avoid_client.Move(0,0,0)
+                            time.sleep(5)
+                            print("STOP BECAUSE TOO CLOSE")
+                            print("Move towards plant")
+                            sport_client.Move(0.2,0,0)
+                            time.sleep(2)
+                            print("Wait for watering")
+                            obstacle_avoid_client.Move(0,0,0)
+                            time.sleep(20)
+                            print("Move back from plant")
+                            obstacle_avoid_client.Move(-0.2,0,0)
+                            time.sleep(3)
+
+
                 else:
                     # Hier ggf links und rechts vertauscht
                     if closest_pot[1] < 0:#Hier ggf den angle an steering mappen
                         #sport_client.Move(0,0,-1.0)
                         if not test_not_move_robot:
-                            code = obstacle_avoid_client.Move(0,0,-1.0)
-                            print("TURN ROBOT RIGHT",code)
+                            obstacle_avoid_client.Move(0,0,-1.0)
+                            print("TURN ROBOT RIGHT")
                     else:
                         #sport_client.Move(0,0,1.0)
                         if not test_not_move_robot:
-                            code = obstacle_avoid_client.Move(0,0,1.0)
-                            print("TURN ROBOT LEFT",code)
+                            obstacle_avoid_client.Move(0,0,1.0)
+                            print("TURN ROBOT LEFT")
             # Bild anzeigen
             cv2.imshow("Erkannte_Objekte", image)
 
