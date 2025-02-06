@@ -104,6 +104,7 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         self.camera_props.enable_tensors = camera.enable_tensors
         self.camera_props.use_collision_geometry = True
         self.third_image_index = camera.height // 3
+        self.split_width_indices = torch.linspace(0, camera.width, camera.split_to_width + 1, dtype=torch.long)
 
 
     def _init_buffers(self):
@@ -177,7 +178,6 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
             dim=-1,
         )
 
-
     # computes high level observations
     def compute_observations(self):
         """ Computes observations
@@ -204,6 +204,13 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         # upper_image_min = depth_information[:, :self.half_image_idx, :].min(dim=1).values
         # lower_image_min = depth_information[:, self.half_image_idx:, :].min(dim=1).values
         third_image = depth_information[:, self.third_image_index:2 * self.third_image_index, :].min(dim=1).values
+        third_image = depth_information[:, self.third_image_index:2*self.third_image_index, :].min(dim=1).values
+        third_image = torch.stack(
+            [
+                third_image[:, self.split_width_indices[i]:self.split_width_indices[i+1]].min(dim=1).values
+                for i in range(self.cfg.camera.split_to_width)
+            ]
+        ).transpose(0,1)
         observable_depth_information = torch.tanh(third_image)
         # Obscure the depth information to have a backup policy
         observable_depth_information = torch.zeros_like(observable_depth_information).to(self.device)
@@ -217,9 +224,11 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
 
     # add custom rewards... here (use your robot_cfg for control)
     def _reward_sanity_check(self):
-        # Just a simple sanity check rewarding fast rotation
+        # Tracking of angular velocity commands (yaw)
+        # Provide slight reward for moving ahead
         ang_vel_error = torch.square(1.0 - self.base_ang_vel[:, 2])  # base_ang_vel
-        return torch.exp(-ang_vel_error / self.cfg.rewards.tracking_sigma)
+        return torch.exp(-ang_vel_error / self.cfg.rewards.tracking_sigma)  # TODO: improve reward
+    # add custom rewards... here (use your robot_cfg for control)
 
     def _reward_minimal_policy(self):
         # Just penalize all movement slightly to minimize unnecessary navigation
@@ -238,6 +247,8 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
     def _reward_plant_closeness(self, threashold=0.33):
         # Calculate plant closeness based reward
         plants_across_envs = [obj["plants"] for obj in self.detected_objects]
+
+        # TODO: improve reward
         plant_probability = utils.convert_object_property(plants_across_envs, "probability", self.device)
         plant_distances = utils.convert_object_property(plants_across_envs, "distance", self.device)
         plant_distances_ = torch.where(plant_distances > threashold, plant_distances,

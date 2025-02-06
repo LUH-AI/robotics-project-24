@@ -318,6 +318,16 @@ class CompatibleLeggedRobot(LeggedRobot, ABC):
             )  # xy position within 1m of the center
         else:
             self.root_states[env_ids] = self.base_init_state
+
+            if getattr(self.cfg.init_state, "random_rotation", False):
+                axis_angles = torch.zeros((len(env_ids), 3), device=self.device)
+                axis_angles[:, 2].uniform_(0, 2 * torch.pi)
+                self.root_states[env_ids, 3:7] = utils.axis_angle_to_quaternion(axis_angles)
+
+            # TODO prevent collisions
+            max_location_offset = getattr(self.cfg.init_state, "maximum_location_offset", 0.0)
+            self.root_states[env_ids, :2] += torch_rand_float(-max_location_offset, max_location_offset, (len(env_ids), 2), device=self.device)
+
             self.root_states[env_ids, :3] += self.env_origins[env_ids]
         # base velocities
         self.root_states[env_ids, 7:13] = torch_rand_float(
@@ -339,6 +349,8 @@ class CompatibleLeggedRobot(LeggedRobot, ABC):
             gymtorch.unwrap_tensor(reset_indices),
             len(reset_indices),
         )
+
+        self.object_force_baseline[env_ids] = self.object_forces[env_ids]
 
     def _push_robots(self):
         """Random pushes the robots. Emulates an impulse by setting a randomized base velocity."""
@@ -387,9 +399,10 @@ class CompatibleLeggedRobot(LeggedRobot, ABC):
         self.base_pos = self.root_states[: self.num_envs, 0:3]
         self.contact_forces = gymtorch.wrap_tensor(net_contact_forces).view(
             self.num_envs, -1, 3
-        )[
-                              :, : self.num_bodies
-                              ]  # shape: num_envs, num_bodies, xyz axis
+        )
+        self.object_forces = self.contact_forces[:, self.num_bodies :]
+        self.object_force_baseline = self.object_forces.clone()
+        self.contact_forces = self.contact_forces[:, : self.num_bodies]  # shape: num_envs, num_bodies, xyz axis
 
         # initialize some data used later on
         self.common_step_counter = 0

@@ -12,7 +12,7 @@ class GO2HighLevelPlantPolicyCfg(GO2DefaultCfg):
         file = str(Path(__file__).parents[2] / "assets/robots" / "go2_with_watering" / "urdf/go2.urdf")
 
     class low_level_policy:
-        path = Path(__file__).parents[1] / "models" / "model.pt"
+        path = Path(__file__).parents[2] / "models" / "low-level_policy" / "low_lvl_model.pt"
         num_observations = 48
         num_actions = 12
         steps_per_high_level_action = 4
@@ -26,24 +26,30 @@ class GO2HighLevelPlantPolicyCfg(GO2DefaultCfg):
 
     class init_state(GO2DefaultCfg.init_state):
         pos = [0.0, 0.0, 0.42]  # x,y,z [m]
+        random_rotation = True
+        maximum_location_offset = 0.0 # Works but might result in collisions with other objects on reset
+
+    class domain_rand(GO2DefaultCfg.domain_rand):
+        push_robots = False
 
     class rewards(GO2DefaultCfg.rewards):
         # Parameters for custom rewards HERE
+        only_positive_rewards = False # if true negative total rewards are clipped at zero (avoids early termination problems)
 
         class scales():
             # only rewards that have a scale will be added (reward is named "_reward_{SCALE_NAME}")
             # sanity_check = 10.
-            plant_closeness = 10.0
-            plant_ahead = 10.0
-            # obstacle_closeness = 0.
-            minimal_policy = -0.1  # 0.1
-            # smooth_commands = -0.01  # 0.1
+            plant_closeness = 2.0
+            plant_ahead = 1.0
+            obstacle_closeness = 0.0  # TODO or -10 from upper values
+            minimize_rotation = 0.
 
     # robot camera:
     class camera:
         horizontal_fov = 120
-        width = 12
-        height = 720
+        width = 128
+        height = 72
+        split_to_width = 12
         enable_tensors = True
         vec_from_body_center = gymapi.Vec3(0.34, 0, 0.021)  # Should be closest to reality: (0.34, 0, 0.021)m
         rot_of_camera = gymapi.Quat.from_axis_angle(

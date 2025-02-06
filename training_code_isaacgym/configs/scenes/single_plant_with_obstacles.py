@@ -21,7 +21,7 @@ class SinglePlantWithObstaclesCfg(BaseSceneCfg):
             "flower_pot",
             plant_path,
             init_location=(0.0, 0.0, 0.2),
-            max_random_loc_offset=(2., 2., 0),
+            max_random_loc_offset=(2.3, 2.3, 0),
             size=(0.125, 0.125, 0.3),
         ),
         StaticObject(
@@ -29,7 +29,7 @@ class SinglePlantWithObstaclesCfg(BaseSceneCfg):
             "obstacle",
             chair_path,
             init_location=(0.0, 0.0, 0.2),
-            max_random_loc_offset=(1.6, 1.6, 0),
+            max_random_loc_offset=(2.2, 2.2, 0),
             size=(0.5, 0.5, 0.5),
         ),
         StaticObject(
@@ -37,7 +37,7 @@ class SinglePlantWithObstaclesCfg(BaseSceneCfg):
             "obstacle",
             chair_path,
             init_location=(0.0, 0.0, 0.2),
-            max_random_loc_offset=(1.6, 1.6, 0),
+            max_random_loc_offset=(2.2, 2.2, 0),
             size=(0.5, 0.5, 0.5),
         ),
         StaticObject(
@@ -45,7 +45,7 @@ class SinglePlantWithObstaclesCfg(BaseSceneCfg):
             "obstacle",
             chair_path,
             init_location=(0.0, 0.0, 0.2),
-            max_random_loc_offset=(1.6, 1.6, 0),
+            max_random_loc_offset=(2.2, 2.2, 0),
             size=(0.5, 0.5, 0.5),
         ),
     ]
