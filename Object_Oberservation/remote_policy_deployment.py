@@ -248,7 +248,7 @@ def main():  # noqa: D103
                 boxes = result.boxes
                 for box in boxes:
                     x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
-                    cls = int(box.cls[0].cpu().numpy())
+                    _cls = int(box.cls[0].cpu().numpy())
                     confidence = box.conf[0].cpu().numpy()
 
                     if confidence > conf_threshold:
@@ -257,16 +257,16 @@ def main():  # noqa: D103
                         angle = calculate_angle(x_center, image.shape[1])
 
                         # Entfernungsschätzung für den Topf basierend auf der Bounding Box
-                        if cls == 1:  # Klasse 0 ist der Blumentopf (angepasst an die Klassendefinition)
+                        if _cls == 1:  # Klasse 0 ist der Blumentopf (angepasst an die Klassendefinition)
                             pot_width_pixels = x2 - x1
                             distance = calculate_distance(pot_width_pixels)
                             pot_positions.append((distance, angle))
                             if distance < closest_pot[0]:
                                 closest_pot = [distance, angle]
 
-                            label = f"Class {int(cls)}: {confidence:.2f}, Distance {int(distance)}"
+                            label = f"Class {int(_cls)}: {confidence:.2f}, Distance {int(distance)}"
                         else:
-                            label = f"Class {int(cls)}: {confidence:.2f}"
+                            label = f"Class {int(_cls)}: {confidence:.2f}"
                         color = (0, 255, 0)  # Grün
                         cv2.rectangle(image, (int(x1), int(y1)), (int(x2), int(y2)), color, 2)
                         cv2.putText(image, label, (int(x1), int(y1) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
@@ -280,8 +280,7 @@ def main():  # noqa: D103
                 object_detection_output = torch.tensor([0, 0, 0])
             else:
                 object_detection_output = torch.tensor(
-                    [closest_pot[0], closest_pot[1] * torch.exp(torch.tensor(-closest_pot[0])),
-                     torch.exp(torch.tensor(-closest_pot[0]))])
+                    [1.0, closest_pot[0], closest_pot[1]])
 
             observable_depth_information = torch.ones(12)
             object_detection_output = object_detection_output
