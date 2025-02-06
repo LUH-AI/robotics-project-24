@@ -169,7 +169,8 @@ def main():  # noqa: D103
     # module = module.to(sim_device)
     import os
     # print("listdir", os.listdir("."))
-    checkpoint = torch.load("models/single_plant_v3_2450.pt", map_location=torch.device("cpu"))
+    #checkpoint = torch.load("models/single_plant_v3_2450.pt", map_location=torch.device("cpu"))
+    checkpoint = torch.load("../logs/single_plant_v4/model_1550.pt", map_location=torch.device("cpu"))
     print("checkpoint loaded")
     # print("low level policy", module)
     model_state_dict = checkpoint.get('model_state_dict')
@@ -261,8 +262,44 @@ def main():  # noqa: D103
 
                         # Entfernungsschätzung für den Topf basierend auf der Bounding Box
                         if _cls == 1:  # Klasse 0 ist der Blumentopf (angepasst an die Klassendefinition)
+                            cropped_image = image[int(y1):int(y2), int(x1):int(x2)]
+                            gray = cv2.cvtColor(cropped_image, cv2.COLOR_BGR2GRAY)
+                            threshold = 180  # Werte über 200 gelten als weiß
+
+                            _, binary = cv2.threshold(gray, threshold, 255, cv2.THRESH_BINARY)
+                            if viz_dev_images:
+                                cv2.imshow("Binary",binary)
+                            height = binary.shape[0]
+                            lower_third_start = int(height * (2 / 3))  # Start des unteren Drittels
+
+                            white_pixel_positions = np.column_stack(np.where(binary[lower_third_start:, :] == 255))
+
                             pot_width_pixels = x2 - x1
-                            distance = calculate_distance(pot_width_pixels)
+                            if len(white_pixel_positions) > 0:
+                                white_pixel_positions[:, 0] += lower_third_start
+
+                                leftmost_pixel = white_pixel_positions[np.argmin(white_pixel_positions[:, 1])]
+
+                                rightmost_pixel = white_pixel_positions[np.argmax(white_pixel_positions[:, 1])]
+                                print(f"Linkester weißer Pixel: {leftmost_pixel}")
+                                print(f"Rechtester weißer Pixel: {rightmost_pixel}")
+
+                                cv2.circle(cropped_image, (leftmost_pixel[1], leftmost_pixel[0]), 5, (0, 0, 255), -1)  # Rot
+                                cv2.circle(cropped_image, (rightmost_pixel[1], rightmost_pixel[0]), 5, (255, 0, 0), -1)  # Blau
+
+                                pot_width_pixels = rightmost_pixel[1] - leftmost_pixel[1]
+                                print(pot_width_pixels, rightmost_pixel[1], leftmost_pixel[1])
+                            if viz_dev_images:
+                                cv2.imshow("Cropped Image",cropped_image)
+
+                            distance = calculate_distance(pot_width_pixels, mask=True)
+
+                            distance_non_mask = calculate_distance(x2-x1, mask=False)
+
+                            if distance_non_mask < 150:
+                                distance=distance_non_mask
+                            if distance==-1:
+                                continue
                             pot_positions.append((distance, angle))
                             if distance < closest_pot[0]:
                                 closest_pot = [distance, angle]
