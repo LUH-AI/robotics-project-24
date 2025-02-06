@@ -43,6 +43,8 @@ map_size = 1000
 
 obstacle_avoid_client = None
 
+viz_dev_images=False
+
 # Handler-Methode: Signal für KeyboardInterrupt abfangen
 def sigint_handler(signal, frame):
     """Keyboard Interrupt function."""
@@ -220,8 +222,9 @@ def main():  # noqa: D103
 
     code, data = client.GetImageSample()
     # lidar_subscriber
-    lidar_subscriber = ChannelSubscriber("rt/utlidar/cloud", PointCloud2_)
-    lidar_subscriber.Init(lidar_cloud_message_handler, 10)
+    # lidar_subscriber = ChannelSubscriber("rt/utlidar/cloud", PointCloud2_)
+    # lidar_subscriber.Init(lidar_cloud_message_handler, 10)
+    
     # lowstate_subscriber = ChannelSubscriber("rt/lowstate", LowState_)
     # lowstate_subscriber.Init(low_state_message_handler, 10)
 
@@ -273,7 +276,8 @@ def main():  # noqa: D103
 
             print("inference step of policy")
             # Lokale Karte aktualisieren
-            update_local_map(robot_position, plants, pot_positions)
+            if viz_dev_images:
+                update_local_map(robot_position, plants, pot_positions)
             # closest_pot
             # Add some probability term, here 1/distance was used like in the simulation
             if closest_pot[1] is None:

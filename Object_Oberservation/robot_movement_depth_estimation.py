@@ -129,7 +129,7 @@ def lidar_cloud_message_handler(msg: PointCloud2_):
 def calculate_distance(pot_width_pixels, mask=False):
     """Berechnet die Entfernung anhand der Breite des Topfes in Pixeln."""
     if pot_width_pixels == 0:
-        return float('inf')
+        return -1
     if mask:
         return (real_pot_width_cm * focal_length_mask) / pot_width_pixels
     else:
@@ -318,6 +318,8 @@ def main():  # noqa: D103
 
                             if distance_non_mask < 150:
                                 distance=distance_non_mask
+                            if distance==-1:
+                                continue
                             pot_positions.append((distance, angle))
                             if distance < closest_pot[0]:
                                 closest_pot = [distance, angle]
@@ -332,7 +334,8 @@ def main():  # noqa: D103
                         cv2.putText(image, label, (int(x1), int(y1) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
             # Lokale Karte aktualisieren
-            update_local_map(robot_position, plants, pot_positions)
+            if viz_dev_images:
+                update_local_map(robot_position, plants, pot_positions)
             if closest_pot[1] is None:
                 #sport_client.Move(0,0,0)# Hier ggf den Roboter drehen lassen bis er was erkennt
                 print("NIX ERKANNT")
