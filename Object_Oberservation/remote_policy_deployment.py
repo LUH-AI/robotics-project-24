@@ -1,4 +1,4 @@
-#type: ignore
+# type: ignore
 
 import math
 import os
@@ -24,6 +24,8 @@ from unitree_sdk2py.idl.unitree_go.msg.dds_ import LowState_
 from unitree_sdk2py.idl.unitree_go.msg.dds_ import LowState_
 # from training_code_isaacgym.environments import utils
 
+# from training_code_isaacgym.environments import utils
+
 # Konfiguration
 device = "cuda" if torch.cuda.is_available() else "cpu"
 model_path = "./runs/detect/train/weights/best.pt"  # Pfad zum trainierten YOLO-Modell
@@ -39,43 +41,20 @@ field_of_view = 120  # Sichtfeld der Kamera in Grad
 
 map_size = 1000
 
+obstacle_avoid_client = None
 
-# *********************
-from actor_critic import ActorCriticRecurrent
-# def load_low_level_policy(sim_device):
-module = ActorCriticRecurrent(
-    num_actor_obs=3 + 12 * 2 + 6,
-    num_critic_obs=3 + 12 * 2 + 6,
-    num_actions=3,
-    actor_hidden_dims=[128, 128],
-    critic_hidden_dims=[128, 128],
-    rnn_hidden_size = 128,
-)
-# module = module.to(sim_device)
-checkpoint = torch.load("models/deployment_model_v1.pth")
-print("low level policy", module)
-
-model_state_dict = checkpoint.get('model_state_dict')
-if model_state_dict is None:
-    raise ValueError("The checkpoint does not contain a 'model_state_dict' key.")
-
-try:
-    module.load_state_dict(model_state_dict)
-except RuntimeError as e:
-    print("\nError while loading state dictionary:")
-    print(e)
-    # return None
-
-# return module
-# *********************
-
+viz_dev_images=False
 
 # Handler-Methode: Signal für KeyboardInterrupt abfangen
 def sigint_handler(signal, frame):
     """Keyboard Interrupt function."""
-    print ("--> KeyboardInterrupt abgefangen")
-    #Programm abbrechen, sonst läuft loop weiter
+    print("--> KeyboardInterrupt abgefangen")
+    global obstacle_avoid_client
+    if obstacle_avoid_client is not None:
+        obstacle_avoid_client.Move(0,0,0.0)
+    # Programm abbrechen, sonst läuft loop weiter
     sys.exit(0)
+
 
 def low_state_message_handler(msg: LowState_):
     """Get the low level states from the robot."""
@@ -84,32 +63,31 @@ def low_state_message_handler(msg: LowState_):
     print("Battery state: voltage: ", msg.power_v, "current: ", msg.power_a)
 
 
-
 def pointcloud_to_image(pointcloud_msg: PointCloud2_):
     # Dimensionen und Daten extrahieren
     width = pointcloud_msg.width
     point_step = pointcloud_msg.point_step
     data = np.array(pointcloud_msg.data, dtype=np.uint8)
-    
+
     # Überprüfen, ob die Daten konsistent sind
     if len(data) % (width * point_step) != 0:
         raise ValueError("Datenlänge ist nicht mit der erwarteten Bildgröße kompatibel.")
-    
     # Beispiel: Nur RGB-Daten extrahieren (angenommen, jeder Punkt hat 3 Bytes RGB)
     if point_step < 3:
         raise ValueError("Zu wenig Daten pro Punkt, um ein RGB-Bild zu erzeugen.")
-    
+
     rgb_data = data[:width * point_step].reshape((width, point_step))
     # Extrahiere nur die ersten 3 Kanäle (RGB)
     image = rgb_data[:, :3].reshape((1, width, 3))  # Höhe ist 1
-    
+
     # Optionale Umwandlung in 8-Bit-Format für Anzeige
     image = np.squeeze(image, axis=0)  # Höhe entfernen, da sie 1 ist
     return image
 
+
 def lidar_cloud_message_handler(msg: PointCloud2_):
     """Get the point cloud states from the robot."""
-    print("Width",msg.width,"Height", msg.height,"Len",len(msg.data))
+    print("Width", msg.width, "Height", msg.height, "Len", len(msg.data))
     image = pointcloud_to_image(msg)
     cv2.imshow("Lidar", image)
 
@@ -120,11 +98,13 @@ def calculate_distance(pot_width_pixels):
         return float('inf')
     return (real_pot_width_cm * focal_length) / pot_width_pixels
 
+
 def calculate_angle(x_center, image_width):
     """Berechnet den Winkel eines Objekts relativ zur Bildmitte."""
     relative_x = x_center - (image_width / 2)
     angle = (relative_x / image_width) * field_of_view
     return -angle
+
 
 def draw_grid(map_image, cell_size):
     """Zeichnet ein Schachbrettraster auf die Karte."""
@@ -132,6 +112,7 @@ def draw_grid(map_image, cell_size):
         cv2.line(map_image, (x, 0), (x, map_size), (50, 50, 50), 1)  # Vertikale Linien
     for y in range(0, map_size, cell_size):
         cv2.line(map_image, (0, y), (map_size, y), (50, 50, 50), 1)  # Horizontale Linien
+
 
 def update_local_map(robot_position, plants, pot_positions):
     """Aktualisiert die lokale Karte mit den Positionen des Roboters und der Pflanzen."""
@@ -151,9 +132,9 @@ def update_local_map(robot_position, plants, pot_positions):
         angle += 90
         plant_x = int(robot_x + distance * math.cos(math.radians(angle)))
         plant_y = int(robot_y - distance * math.sin(math.radians(angle)))
-        #plant_x = max(0,min(500,plant_x))
-        #plant_y = max(0,min(500,plant_y))
-        print("Plant distance: ",distance, " Angle: ", angle, "X: ",plant_x," Y: ",plant_y)
+        # plant_x = max(0,min(500,plant_x))
+        # plant_y = max(0,min(500,plant_y))
+        print("Plant distance: ", distance, " Angle: ", angle, "X: ", plant_x, " Y: ", plant_y)
         cv2.circle(map_image, (plant_x, plant_y), 5, (0, 255, 0), -1)  # Pflanzen als grüne Kreise
 
     # Töpfe zeichnen
@@ -162,20 +143,52 @@ def update_local_map(robot_position, plants, pot_positions):
         angle += 90
         pot_x = int(robot_x + distance * math.cos(math.radians(angle)))
         pot_y = int(robot_y - distance * math.sin(math.radians(angle)))
-        #pot_x = max(0,min(500,pot_x))
-        #pot_y = max(0,min(500,pot_y))
-        #print("Pot distance: ",distance, " Angle: ", angle, "X: ",pot_x," Y: ",pot_y)
+        # pot_x = max(0,min(500,pot_x))
+        # pot_y = max(0,min(500,pot_y))
+        # print("Pot distance: ",distance, " Angle: ", angle, "X: ",pot_x," Y: ",pot_y)
         cv2.circle(map_image, (pot_x, pot_y), 5, (0, 0, 255), -1)  # Topf als roter Kreis
 
     cv2.imshow("Lokale Karte", map_image)
+
 
 def main():  # noqa: D103
     signal.signal(signal.SIGINT, sigint_handler)
     # YOLO-Modell laden
     model = YOLO(model_path)
+    print("Yolo loaded")
+    # *********************
+    from actor_critic import ActorCritic
+    # def load_low_level_policy(sim_device):
+    module = ActorCritic(  # Recurrent(
+        num_actor_obs=3 + 12,  # * 2 + 6,
+        num_critic_obs=3 + 12,  # * 2 + 6,
+        num_actions=3,
+        actor_hidden_dims=[512, 256, 128],  # 128, 128],
+        critic_hidden_dims=[512, 256, 128],  # [128, 128],
+    )
+    # module = module.to(sim_device)
+    import os
+    # print("listdir", os.listdir("."))
+    checkpoint = torch.load("models/single_plant_v3_2450.pt", map_location=torch.device("cpu"))
+    print("checkpoint loaded")
+    # print("low level policy", module)
+    model_state_dict = checkpoint.get('model_state_dict')
+    if model_state_dict is None:
+        raise ValueError("The checkpoint does not contain a 'model_state_dict' key.")
+
+    try:
+        module.load_state_dict(model_state_dict)
+    except RuntimeError as e:
+        print("\nError while loading state dictionary:")
+        print(e)
+        # return None
+    print("inference model loaded")
+
+    # return module
+    # *********************
 
     # Roboterposition (unten in der Mitte der Karte)
-    robot_position = (int(map_size/2), int(map_size)-50)
+    robot_position = (int(map_size / 2), int(map_size) - 50)
 
     cv2.namedWindow("Erkannte_Objekte", cv2.WINDOW_AUTOSIZE)
 
@@ -186,7 +199,8 @@ def main():  # noqa: D103
     else:
         ChannelFactoryInitialize(0)
     """
-    #urdf_loader = URDFLoader()
+    # urdf_loader = URDFLoader()
+    global obstacle_avoid_client
     obstacle_avoid_client = ObstaclesAvoidClient()
     obstacle_avoid_client.SetTimeout(3.0)
     obstacle_avoid_client.Init()
@@ -198,7 +212,6 @@ def main():  # noqa: D103
     print("obstacles avoid switch on")
     obstacle_avoid_client.UseRemoteCommandFromApi(True)
 
-
     client = VideoClient()  # Create a video client
     client.SetTimeout(3.0)
     client.Init()
@@ -208,13 +221,15 @@ def main():  # noqa: D103
     sport_client.Init()
 
     code, data = client.GetImageSample()
+    # lidar_subscriber
+    # lidar_subscriber = ChannelSubscriber("rt/utlidar/cloud", PointCloud2_)
+    # lidar_subscriber.Init(lidar_cloud_message_handler, 10)
+    
+    # lowstate_subscriber = ChannelSubscriber("rt/lowstate", LowState_)
+    # lowstate_subscriber.Init(low_state_message_handler, 10)
 
-    #lidar_subscriber = ChannelSubscriber("rt/utlidar/cloud", PointCloud2_)
-    #lidar_subscriber.Init(lidar_cloud_message_handler, 10)
-
-    lowstate_subscriber = ChannelSubscriber("rt/lowstate", LowState_)
-    lowstate_subscriber.Init(low_state_message_handler, 10)
-
+    # prepare variables for the agent
+    high_level_actions_prev1 = high_level_actions_prev2 = torch.zeros(3)
 
     # Alle Bilder im Ordner durchlaufen
     while code == 0:
@@ -225,19 +240,18 @@ def main():  # noqa: D103
             image_data = np.frombuffer(bytes(data), dtype=np.uint8)
             image = cv2.imdecode(image_data, cv2.IMREAD_COLOR)
 
-
             # Prediction durchführen
             results = model(image, verbose=False)
             plants = []
             pot_positions = []
 
-            closest_pot = (float("inf"),None)
+            closest_pot = (float("inf"), None)
 
             for result in results:
                 boxes = result.boxes
                 for box in boxes:
                     x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
-                    cls = int(box.cls[0].cpu().numpy())
+                    _cls = int(box.cls[0].cpu().numpy())
                     confidence = box.conf[0].cpu().numpy()
 
                     if confidence > conf_threshold:
@@ -246,78 +260,96 @@ def main():  # noqa: D103
                         angle = calculate_angle(x_center, image.shape[1])
 
                         # Entfernungsschätzung für den Topf basierend auf der Bounding Box
-                        if cls == 1:  # Klasse 0 ist der Blumentopf (angepasst an die Klassendefinition)
+                        if _cls == 1:  # Klasse 0 ist der Blumentopf (angepasst an die Klassendefinition)
                             pot_width_pixels = x2 - x1
                             distance = calculate_distance(pot_width_pixels)
                             pot_positions.append((distance, angle))
                             if distance < closest_pot[0]:
                                 closest_pot = [distance, angle]
 
-                            label = f"Class {int(cls)}: {confidence:.2f}, Distance {int(distance)}"
+                            label = f"Class {int(_cls)}: {confidence:.2f}, Distance {int(distance)}"
                         else:
-                            label = f"Class {int(cls)}: {confidence:.2f}"
+                            label = f"Class {int(_cls)}: {confidence:.2f}"
                         color = (0, 255, 0)  # Grün
                         cv2.rectangle(image, (int(x1), int(y1)), (int(x2), int(y2)), color, 2)
                         cv2.putText(image, label, (int(x1), int(y1) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
+            print("inference step of policy")
             # Lokale Karte aktualisieren
-            update_local_map(robot_position, plants, pot_positions)
+            if viz_dev_images:
+                update_local_map(robot_position, plants, pot_positions)
             # closest_pot
             # Add some probability term, here 1/distance was used like in the simulation
             if closest_pot[1] is None:
                 object_detection_output = torch.tensor([0, 0, 0])
             else:
-                object_detection_output = torch.tensor([closest_pot[0], closest_pot[1] * torch.exp(-closest_pot[0]),
-                                           torch.exp(-closest_pot[0])])
+                object_detection_output = torch.tensor(
+                    [1.0, closest_pot[0], closest_pot[1]])
 
-
-            observable_depth_information = torch.ones(12).float()
-            observations = torch.cat(object_detection_output,
-                            torch.tanh(observable_depth_information),
-                            high_level_actions_prev1,
-                            high_level_actions_prev2)
+            observable_depth_information = torch.ones(12)
+            object_detection_output = object_detection_output
+            observations = torch.cat([object_detection_output,
+                                      observable_depth_information,  # torch.tanh(observable_depth_information),
+                                      # high_level_actions_prev1,
+                                      # high_level_actions_prev2
+                                      ])
             print("observations", observations.shape)
-            commands = module.act_inference(observations)
+            commands = module.act_inference(observations.float())
+            commands = torch.tanh(commands) * 0.2
+
             print("actions", commands.shape)
 
             high_level_actions_prev2 = high_level_actions_prev1
             high_level_actions_prev1 = commands
-            code = obstacle_avoid_client.Move(commands[0], commands[1], commands[2])
+            print("commands: " + str(commands[0]) + ", " + str(commands[1]) + ", " + str(commands[2]))
+
+            code = obstacle_avoid_client.Move(commands[0].tolist(), commands[1].tolist(), commands[2].tolist())
+
             print("Apply action", code)
-
-
+            time.sleep(0.5)
+            code = obstacle_avoid_client.Move(0, 0, 0)
+            print("Apply action", code)
+            time.sleep(0.5)
+            '''
             if closest_pot[1] is None:
-                #sport_client.Move(0,0,0)# Hier ggf den Roboter drehen lassen bis er was erkennt
+                # sport_client.Move(0,0,0)# Hier ggf den Roboter drehen lassen bis er was erkennt
                 code = obstacle_avoid_client.Move(0, 0, 0)
-                print("NIX ERKANNT",code)
+                print("NIX ERKANNT", code)
+
             else:
-                print("Distance: ",closest_pot[0],"ANGLE: ",closest_pot[1])
-                if abs (closest_pot[1]) < 20:
-                    if closest_pot[0] > 60: #cm
-                        #sport_client.Move(1.0,0,0)
-                        code = obstacle_avoid_client.Move(1.0,0,0)
-                        print("MOVE FORWARD",code)
-                    else: #Hier ggf aufs Lidar wechseln
-                        #sport_client.Move(0,0,0)
-                        code = obstacle_avoid_client.Move(0,0,0)
-                        print("STOP BECAUSE TOO CLOSE",code)
+                print("Distance: ", closest_pot[0], "ANGLE: ", closest_pot[1])
+                if abs(closest_pot[1]) < 20:
+                    if closest_pot[0] > 60:  # cm
+                        # sport_client.Move(1.0,0,0)
+                        code = obstacle_avoid_client.Move(1.0, 0, 0)
+                        print("MOVE FORWARD", code)
+                    else:  # Hier ggf aufs Lidar wechseln
+                        # sport_client.Move(0,0,0)
+                        code = obstacle_avoid_client.Move(0, 0, 0)
+                        print("STOP BECAUSE TOO CLOSE", code)
                 else:
                     # Hier ggf links und rechts vertauscht
-                    if closest_pot[1] < 0:#Hier ggf den angle an steering mappen
-                        #sport_client.Move(0,0,-1.0)
-                        code = obstacle_avoid_client.Move(0,0,-1.0)
-                        print("TURN ROBOT RIGHT",code)
+                    if closest_pot[1] < 0:  # Hier ggf den angle an steering mappen
+                        # sport_client.Move(0,0,-1.0)
+                        code = obstacle_avoid_client.Move(0, 0, -1.0)
+                        print("TURN ROBOT RIGHT", code)
                     else:
 
-                        print("TURN ROBOT LEFT",code)
+                        print("TURN ROBOT LEFT", code)
+            '''
+
             # Bild anzeigen
             cv2.imshow("Erkannte_Objekte", image)
 
             # Warten, bis eine Taste gedrückt wird
             cv2.waitKey(1)
+            code = obstacle_avoid_client.Move(0., 0., 0.)
+            print("Apply action", code)
+            cv2.waitKey(1)
 
     # OpenCV-Fenster schließen
     cv2.destroyAllWindows()
+
 
 if __name__ == "__main__":
     main()
