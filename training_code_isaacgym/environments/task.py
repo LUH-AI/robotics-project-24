@@ -283,30 +283,19 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
             if len(self.absolute_plant_locations):
                 for plant_location in self.absolute_plant_locations[env_idx]:
                     distance, angle = utils.get_distance_and_angle(robot_position, robot_orientation, plant_location)
-                    # Increasing noise in the probability prediction with increasing distance
-                    probability = 1.0 - 0.25 * torch.rand(1).to(self.device) * torch.tanh(robot_position * 0.25).to(self.device)
-                    if distance < detection_threshold:
-                        probability = 0.
+                    # Improved probability function using both distance and angle
+                    probability = max(0.1, (1.0 - distance / d_max) * torch.cos(angle).item())
+
                     plants.append(utils.get_object_observation(plant_location, distance, angle, probability, fov_angle))
 
             if len(self.absolute_obstacle_locations):
                 for obstacle_location in self.absolute_obstacle_locations[env_idx]:
                     distance, angle = utils.get_distance_and_angle(robot_position, robot_orientation, obstacle_location)
-                    # Increasing noise in the probability prediction with increasing distance
-                    probability = 1.0 - 0.25 * torch.rand(1).to(self.device) * torch.tanh(robot_position * 0.25).to(self.device)
-                    if distance < detection_threshold:
-                        probability = 0.
-                    obstacles.append(
-                        utils.get_object_observation(obstacle_location, distance, angle, probability, fov_angle))
+                    # Improved probability function using both distance and angle
+                    probability = max(0.1, (1.0 - distance / d_max) * torch.cos(angle).item())
 
-            # Block plant visibility by obstacles, if in front
-            threshold = 10  # in degrees for better interpretability
-            threshold = threshold/180*3.142  # degrees to rad
-            for plant_index, plant in enumerate(plants):
-                for obstacle_index, obstacle in enumerate(obstacles):
-                    if obstacle["angle"].abs() < threshold:
-                        plants[plant_index]["probability"] = 0.0
-                            
+                    obstacles.append(utils.get_object_observation(obstacle_location, distance, angle, probability, fov_angle))
+
             detected_objects.append({
                 "env_idx": env_idx,
                 "obstacles": sorted(obstacles, key=lambda p: p["probability"], reverse=True)[:1],
