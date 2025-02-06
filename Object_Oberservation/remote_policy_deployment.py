@@ -96,13 +96,13 @@ def calculate_distance(pot_width_pixels):
     """Berechnet die Entfernung anhand der Breite des Topfes in Pixeln."""
     if pot_width_pixels == 0:
         return float('inf')
-    return ((real_pot_width_cm * focal_length) / pot_width_pixels)/100
+    return ((real_pot_width_cm * focal_length) / pot_width_pixels) / 100
 
 
 def calculate_angle(x_center, image_width):
     """Berechnet den Winkel eines Objekts relativ zur Bildmitte."""
     relative_x = x_center - (image_width / 2)
-    angle = (relative_x / image_width) * field_of_view
+    angle = (relative_x / image_width) * field_of_view / 180 * np.pi
     return -angle
 
 
@@ -129,6 +129,8 @@ def update_local_map(robot_position, plants, pot_positions):
     # Pflanzen zeichnen
     for plant in plants:
         distance, angle = plant
+        distance *= 100
+        angle = angle / np.pi * 180
         angle += 90
         plant_x = int(robot_x + distance * math.cos(math.radians(angle)))
         plant_y = int(robot_y - distance * math.sin(math.radians(angle)))
@@ -140,6 +142,8 @@ def update_local_map(robot_position, plants, pot_positions):
     # Töpfe zeichnen
     for pot in pot_positions:
         distance, angle = pot
+        distance *= 100
+        angle = angle / np.pi * 180
         angle += 90
         pot_x = int(robot_x + distance * math.cos(math.radians(angle)))
         pot_y = int(robot_y - distance * math.sin(math.radians(angle)))
@@ -295,7 +299,7 @@ def main():  # noqa: D103
 
                             distance_non_mask = calculate_distance(x2-x1, mask=False)
 
-                            if distance_non_mask < 150:
+                            if distance_non_mask < 1.5:
                                 distance=distance_non_mask
                             if distance==-1:
                                 continue
@@ -315,7 +319,7 @@ def main():  # noqa: D103
             if viz_dev_images:
                 update_local_map(robot_position, plants, pot_positions)
             # closest_pot
-            if abs (closest_pot[1]) < 3 and closest_pot[0] <= 60: #cm
+            if abs (closest_pot[1]) < 3 / 180 * np.pi and closest_pot[0] <= 0.6:
                 print("Wait for standstill")
                 obstacle_avoid_client.Move(0,0,0)
                 time.sleep(3)
@@ -330,12 +334,13 @@ def main():  # noqa: D103
                 obstacle_avoid_client.Move(-0.2,0,0)
                 time.sleep(3)
             else:
-                # Add some probability term, here 1/distance was used like in the simulation
                 if closest_pot[1] is None:
                     object_detection_output = torch.tensor([0, 0, 0])
                 else:
                     object_detection_output = torch.tensor(
                         [1.0, closest_pot[0], closest_pot[1]])
+
+                print(f"{object_detection_output=}")
 
                 observable_depth_information = torch.ones(12)
                 object_detection_output = object_detection_output
@@ -344,11 +349,10 @@ def main():  # noqa: D103
                                         # high_level_actions_prev1,
                                         # high_level_actions_prev2
                                         ])
-                print("observations", observations.shape)
+
                 commands = module.act_inference(observations.float())
                 commands = torch.tanh(commands) * 0.2
 
-                print("actions", commands.shape)
 
                 high_level_actions_prev2 = high_level_actions_prev1
                 high_level_actions_prev1 = commands
