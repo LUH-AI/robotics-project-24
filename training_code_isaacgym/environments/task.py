@@ -213,7 +213,8 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         ).transpose(0,1)
         observable_depth_information = torch.tanh(third_image)
         # Obscure the depth information to have a backup policy
-        observable_depth_information = torch.zeros_like(observable_depth_information).to(self.device)
+        # observable_depth_information = torch.zeros_like(observable_depth_information).to(self.device)
+
         self.obs_buf = torch.cat((
             plant_probability,
             torch.mul(plant_distances, plant_probability),
@@ -233,7 +234,7 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
     def _reward_minimal_policy(self):
         # Just penalize all movement slightly to minimize unnecessary navigation
         ang_vel_error = torch.square(self.base_ang_vel[:, 2])
-        lin_vel_error = torch.square(self.base_lin_vel[:, 1])  # .mean(dim=1)
+        lin_vel_error = torch.square(self.base_lin_vel[:, 1])
         return ang_vel_error + lin_vel_error + 0.05
 
     def _reward_smooth_commands(self, threshold=0.2):
