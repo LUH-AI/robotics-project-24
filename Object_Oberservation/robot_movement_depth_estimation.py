@@ -129,7 +129,7 @@ def lidar_cloud_message_handler(msg: PointCloud2_):
 def calculate_distance(pot_width_pixels, mask=False):
     """Berechnet die Entfernung anhand der Breite des Topfes in Pixeln."""
     if pot_width_pixels == 0:
-        return -1
+        return float("inf")
     if mask:
         return (real_pot_width_cm * focal_length_mask) / pot_width_pixels
     else:
@@ -318,7 +318,7 @@ def main():  # noqa: D103
 
                             if distance_non_mask < 150:
                                 distance=distance_non_mask
-                            if distance==-1:
+                            if distance==float("inf"):
                                 continue
                             pot_positions.append((distance, angle))
                             if distance < closest_pot[0]:
@@ -355,13 +355,16 @@ def main():  # noqa: D103
                             print("Wait for standstill")
                             obstacle_avoid_client.Move(0,0,0)
                             time.sleep(3)
+                            print("Move slowly forward")
+                            obstacle_avoid_client.Move(0.2,0,0)
                             print("STOP BECAUSE TOO CLOSE")
+                            time.sleep(2)
                             print("Move towards plant")
                             sport_client.Move(0.2,0,0)
-                            time.sleep(2.3)
+                            time.sleep(0.5)
                             print("Wait for watering")
                             obstacle_avoid_client.Move(0,0,0)
-                            time.sleep(20)
+                            time.sleep(10)
                             print("Move back from plant")
                             obstacle_avoid_client.Move(-0.2,0,0)
                             time.sleep(3)

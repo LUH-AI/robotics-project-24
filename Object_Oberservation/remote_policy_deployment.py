@@ -98,9 +98,9 @@ def calculate_distance(pot_width_pixels, mask=False):
     if pot_width_pixels == 0:
         return -1
     if mask:
-        return (real_pot_width_cm * focal_length_mask) / pot_width_pixels
+        return ((real_pot_width_cm * focal_length_mask) / pot_width_pixels)/100.0
     else:
-        return (real_pot_width_cm * focal_length) / pot_width_pixels
+        return ((real_pot_width_cm * focal_length) / pot_width_pixels)/100.0
 
 
 def calculate_angle(x_center, image_width):
@@ -288,14 +288,14 @@ def main():  # noqa: D103
                                 leftmost_pixel = white_pixel_positions[np.argmin(white_pixel_positions[:, 1])]
 
                                 rightmost_pixel = white_pixel_positions[np.argmax(white_pixel_positions[:, 1])]
-                                print(f"Linkester weißer Pixel: {leftmost_pixel}")
-                                print(f"Rechtester weißer Pixel: {rightmost_pixel}")
+                                #print(f"Linkester weißer Pixel: {leftmost_pixel}")
+                                #print(f"Rechtester weißer Pixel: {rightmost_pixel}")
 
                                 cv2.circle(cropped_image, (leftmost_pixel[1], leftmost_pixel[0]), 5, (0, 0, 255), -1)  # Rot
                                 cv2.circle(cropped_image, (rightmost_pixel[1], rightmost_pixel[0]), 5, (255, 0, 0), -1)  # Blau
 
                                 pot_width_pixels = rightmost_pixel[1] - leftmost_pixel[1]
-                                print(pot_width_pixels, rightmost_pixel[1], leftmost_pixel[1])
+                                #print(pot_width_pixels, rightmost_pixel[1], leftmost_pixel[1])
                             if viz_dev_images:
                                 cv2.imshow("Cropped Image",cropped_image)
 
@@ -311,40 +311,50 @@ def main():  # noqa: D103
                             if distance < closest_pot[0]:
                                 closest_pot = [distance, angle]
 
-                            label = f"Class {int(_cls)}: {confidence:.2f}, Distance {int(distance)}"
+                            if len(white_pixel_positions) > 0:
+                                label = f"Class {int(_cls)}: {confidence:.2f}, Distance {(distance_non_mask)}, Mask-Distance:{(distance)}"
+                            else:
+                                label = f"Class {int(_cls)}: {confidence:.2f}, Distance {(distance_non_mask)}"
+                       
                         else:
                             label = f"Class {int(_cls)}: {confidence:.2f}"
                         color = (0, 255, 0)  # Grün
                         cv2.rectangle(image, (int(x1), int(y1)), (int(x2), int(y2)), color, 2)
                         cv2.putText(image, label, (int(x1), int(y1) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
-            print("inference step of policy")
+            #print("inference step of policy")
             # Lokale Karte aktualisieren
             if viz_dev_images:
                 update_local_map(robot_position, plants, pot_positions)
             # closest_pot
-            if closest_pot[1] is not None and abs (closest_pot[1]) < 3 / 180 * np.pi and closest_pot[0] <= 0.6:
+            print("Angle:",closest_pot[1],"Threshold",3 / 180 * np.pi,"Distance",closest_pot[0])
+            if closest_pot[1] is not None and abs (closest_pot[1]) < 3 / 180 * np.pi and closest_pot[0] <= 0.8:
                 print("Wait for standstill")
                 obstacle_avoid_client.Move(0,0,0)
                 time.sleep(3)
+                print("Move slowly forward")
+                obstacle_avoid_client.Move(0.2,0,0)
                 print("STOP BECAUSE TOO CLOSE")
+                time.sleep(2)
                 print("Move towards plant")
                 sport_client.Move(0.2,0,0)
-                time.sleep(2.3)
+                time.sleep(0.5)
                 print("Wait for watering")
                 obstacle_avoid_client.Move(0,0,0)
-                time.sleep(20)
+                time.sleep(10)
                 print("Move back from plant")
                 obstacle_avoid_client.Move(-0.2,0,0)
-                time.sleep(3)
+                time.sleep(2)
+                obstacle_avoid_client.Move(0,0,0)
+                break
             else:
                 if closest_pot[1] is None:
                     object_detection_output = torch.tensor([0, 0, 0])
                 else:
                     object_detection_output = torch.tensor(
-                        [1.0, closest_pot[0], closest_pot[1]])
+                        [1.0, closest_pot[0]+0.4, closest_pot[1]])
 
-                print(f"{object_detection_output=}")
+                #print(f"{object_detection_output=}")
 
                 observable_depth_information = torch.ones(12)
                 object_detection_output = object_detection_output
@@ -355,19 +365,19 @@ def main():  # noqa: D103
                                         ])
 
                 commands = module.act_inference(observations.float())
-                commands = torch.tanh(commands) * 0.2
+                commands = torch.tanh(commands*0.1) * 0.2
 
-
+                commands[2]*=2
                 high_level_actions_prev2 = high_level_actions_prev1
                 high_level_actions_prev1 = commands
                 print("commands: " + str(commands[0]) + ", " + str(commands[1]) + ", " + str(commands[2]))
 
                 code = obstacle_avoid_client.Move(commands[0].tolist(), commands[1].tolist(), commands[2].tolist())
 
-                print("Apply action", code)
+                #print("Apply action", code)
                 time.sleep(0.5)
                 code = obstacle_avoid_client.Move(0, 0, 0)
-                print("Apply action", code)
+                #print("Apply action", code)
                 time.sleep(0.5)
             '''
             if closest_pot[1] is None:
@@ -403,7 +413,7 @@ def main():  # noqa: D103
             # Warten, bis eine Taste gedrückt wird
             cv2.waitKey(1)
             code = obstacle_avoid_client.Move(0., 0., 0.)
-            print("Apply action", code)
+            #print("Apply action", code)
             cv2.waitKey(1)
 
     # OpenCV-Fenster schließen
