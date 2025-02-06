@@ -272,6 +272,7 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         """
         detected_objects = []
         fov_angle = torch.deg2rad(torch.tensor(120.0 / 2))  # Half of 120 degrees in radians
+        d_max = 10.0  # Define a max detection distance
 
         for env_idx in range(self.num_envs):
             robot_position = self.base_pos[env_idx]  # Get robot position for the current environment
