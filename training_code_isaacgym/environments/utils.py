@@ -100,12 +100,12 @@ def get_distance_and_angle(robot_location: torch.Tensor, robot_orientation: torc
     """Calculates distance and angle of an object to the robot
 
     Args:
-        robot_location (torch.Tensor): Absolute location of the robot
-        robot_orientation (torch.Tensor): Orientation of the robot
-        object_location (torch.Tensor): Absolute location of the object
+        robot_location (torch.Tensor): Absolute location of the robot (in m)
+        robot_orientation (torch.Tensor): Orientation of the robot (in radians)
+        object_location (torch.Tensor): Absolute location of the object (in m)
 
     Returns:
-        Tuple[torch.Tensor, torch.Tensor]: Distance, angle to robot
+        Tuple[torch.Tensor, torch.Tensor]: Distance (in m), angle to robot (in radians)
     """
     # Compute distance from robot to plant
     distance = torch.norm(object_location - robot_location)
