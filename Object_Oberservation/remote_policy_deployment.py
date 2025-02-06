@@ -315,37 +315,52 @@ def main():  # noqa: D103
             if viz_dev_images:
                 update_local_map(robot_position, plants, pot_positions)
             # closest_pot
-            # Add some probability term, here 1/distance was used like in the simulation
-            if closest_pot[1] is None:
-                object_detection_output = torch.tensor([0, 0, 0])
+            if abs (closest_pot[1]) < 3 and closest_pot[0] <= 60: #cm
+                print("Wait for standstill")
+                obstacle_avoid_client.Move(0,0,0)
+                time.sleep(3)
+                print("STOP BECAUSE TOO CLOSE")
+                print("Move towards plant")
+                sport_client.Move(0.2,0,0)
+                time.sleep(2.3)
+                print("Wait for watering")
+                obstacle_avoid_client.Move(0,0,0)
+                time.sleep(20)
+                print("Move back from plant")
+                obstacle_avoid_client.Move(-0.2,0,0)
+                time.sleep(3)
             else:
-                object_detection_output = torch.tensor(
-                    [1.0, closest_pot[0], closest_pot[1]])
+                # Add some probability term, here 1/distance was used like in the simulation
+                if closest_pot[1] is None:
+                    object_detection_output = torch.tensor([0, 0, 0])
+                else:
+                    object_detection_output = torch.tensor(
+                        [1.0, closest_pot[0], closest_pot[1]])
 
-            observable_depth_information = torch.ones(12)
-            object_detection_output = object_detection_output
-            observations = torch.cat([object_detection_output,
-                                      observable_depth_information,  # torch.tanh(observable_depth_information),
-                                      # high_level_actions_prev1,
-                                      # high_level_actions_prev2
-                                      ])
-            print("observations", observations.shape)
-            commands = module.act_inference(observations.float())
-            commands = torch.tanh(commands) * 0.2
+                observable_depth_information = torch.ones(12)
+                object_detection_output = object_detection_output
+                observations = torch.cat([object_detection_output,
+                                        observable_depth_information,  # torch.tanh(observable_depth_information),
+                                        # high_level_actions_prev1,
+                                        # high_level_actions_prev2
+                                        ])
+                print("observations", observations.shape)
+                commands = module.act_inference(observations.float())
+                commands = torch.tanh(commands) * 0.2
 
-            print("actions", commands.shape)
+                print("actions", commands.shape)
 
-            high_level_actions_prev2 = high_level_actions_prev1
-            high_level_actions_prev1 = commands
-            print("commands: " + str(commands[0]) + ", " + str(commands[1]) + ", " + str(commands[2]))
+                high_level_actions_prev2 = high_level_actions_prev1
+                high_level_actions_prev1 = commands
+                print("commands: " + str(commands[0]) + ", " + str(commands[1]) + ", " + str(commands[2]))
 
-            code = obstacle_avoid_client.Move(commands[0].tolist(), commands[1].tolist(), commands[2].tolist())
+                code = obstacle_avoid_client.Move(commands[0].tolist(), commands[1].tolist(), commands[2].tolist())
 
-            print("Apply action", code)
-            time.sleep(0.5)
-            code = obstacle_avoid_client.Move(0, 0, 0)
-            print("Apply action", code)
-            time.sleep(0.5)
+                print("Apply action", code)
+                time.sleep(0.5)
+                code = obstacle_avoid_client.Move(0, 0, 0)
+                print("Apply action", code)
+                time.sleep(0.5)
             '''
             if closest_pot[1] is None:
                 # sport_client.Move(0,0,0)# Hier ggf den Roboter drehen lassen bis er was erkennt
