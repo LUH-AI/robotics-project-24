@@ -350,8 +350,6 @@ class CompatibleLeggedRobot(LeggedRobot, ABC):
             len(reset_indices),
         )
 
-        self.object_force_baseline[env_ids] = self.object_forces[env_ids]
-
     def _push_robots(self):
         """Random pushes the robots. Emulates an impulse by setting a randomized base velocity."""
         max_vel = self.cfg.domain_rand.max_push_vel_xy
@@ -401,7 +399,6 @@ class CompatibleLeggedRobot(LeggedRobot, ABC):
             self.num_envs, -1, 3
         )
         self.object_forces = self.contact_forces[:, self.num_bodies :]
-        self.object_force_baseline = self.object_forces.clone()
         self.contact_forces = self.contact_forces[:, : self.num_bodies]  # shape: num_envs, num_bodies, xyz axis
 
         # initialize some data used later on

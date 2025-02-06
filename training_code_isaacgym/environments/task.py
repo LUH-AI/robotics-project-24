@@ -230,7 +230,7 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
 
         combined_reward = torch.exp(-plant_distances) * plant_probability
         combined_reward += 10 * torch.exp(-plant_distances * 10.) * plant_probability
-        return combined_reward
+        return combined_reward * (plant_distances > 0.6).float()
 
     def _reward_obstacle_closeness(self):
         # Tracking of angular velocity commands (yaw)
@@ -258,7 +258,7 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
         Returns:
             torch.Tensor: Summed absolute contact forces on object bodies
         """
-        reward = torch.mean(torch.abs(self.object_forces[:, :, :2] - self.object_force_baseline[:, :, :2]))
+        reward = torch.mean(torch.abs(self.object_forces[:, :, :2]))
         #print(f"{reward=}")
         return reward
 
