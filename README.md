@@ -11,8 +11,14 @@ Low-Level Policy in Simulation (TODO update video)
 High-Level Policy in Simulation
 TODO
 
-Real-World Scenario
-TODO
+## Tool
+
+For the actual deployment, we developed and 3d printed some plant watering tool for the Go2.
+![Adaptive tool mount](3d_printed_parts/tool_example_parts.png)
+For fast and easy mounting/unmounting, we also developed a custom mechanism with handles,
+that could easily be used for other projects build on top of the Go2.
+![Adaptive tool mount](3d_printed_parts/tool_example_parts2.png)
+All parts of the mounting mechanism as well as the tool for this project are in the 3d_printed_parts directory.
 
 ## Documentation
 * A Guide for the setup/installation can be found in **SETUP.md**. 
