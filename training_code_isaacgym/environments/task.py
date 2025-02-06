@@ -202,11 +202,13 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
                 third_image[:, self.split_width_indices[i]:self.split_width_indices[i+1]].min(dim=1).values
                 for i in range(self.cfg.camera.split_to_width)
             ]
-        ).transpose(0,1)
+        ).transpose(0, 1)
         observable_depth_information = torch.tanh(third_image)
-        self.obs_buf = torch.cat((#self.base_lin_vel * self.obs_scales.lin_vel,
-                                  #self.projected_gravity,
-                                  plant_probability,
+
+        # To train an alternative policy without depth information
+        # observable_depth_information = torch.ones_like(observable_depth_information).to(self.device)
+
+        self.obs_buf = torch.cat((plant_probability,
                                   torch.mul(plant_distances, plant_probability),
                                   torch.mul(plant_angles, plant_probability),
                                   observable_depth_information,
@@ -217,26 +219,24 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
     def _reward_minimize_rotation(self):
         # Tracking of angular velocity commands (yaw)
         # Provide slight reward for moving ahead
-        ang_vel_error = torch.square(self.base_ang_vel[:, 2])  # base_ang_vel
-        return torch.exp(-ang_vel_error / self.cfg.rewards.tracking_sigma)  # TODO: improve reward
+        ang_vel_error = torch.square(self.base_ang_vel[:, 2])
+        return torch.exp(-ang_vel_error / self.cfg.rewards.tracking_sigma)
 
     def _reward_plant_closeness(self):
         # Tracking of angular velocity commands (yaw)
         plants_across_envs = [obj["plants"] for obj in self.detected_objects]
 
-        # TODO: improve reward
         plant_probability = utils.convert_object_property(plants_across_envs, "probability", self.device)
         plant_distances = utils.convert_object_property(plants_across_envs, "distance", self.device)
 
-        combined_reward = torch.exp(-plant_distances) * plant_probability
-        combined_reward += 10 * torch.exp(-plant_distances * 10.) * plant_probability
+        combined_reward = torch.exp(-plant_distances * 0.5) * plant_probability
+        combined_reward += torch.exp(-plant_distances * 2.5) * plant_probability
         return combined_reward
 
     def _reward_obstacle_closeness(self):
         # Tracking of angular velocity commands (yaw)
         obstacles_across_envs = [obj["obstacles"] for obj in self.detected_objects]
-        
-        # TODO: improve reward
+
         obstacle_probability = utils.convert_object_property(obstacles_across_envs, "probability", self.device)
         obstacle_distances = utils.convert_object_property(obstacles_across_envs, "distance", self.device)
         obstacle_angles = utils.convert_object_property(obstacles_across_envs, "angle", self.device)
@@ -245,10 +245,10 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
     def _reward_plant_ahead(self):
         # Tracking of angular velocity commands (yaw)
         plants_across_envs = [obj["plants"] for obj in self.detected_objects]
-        # TODO: improve reward
+
         plant_probability = utils.convert_object_property(plants_across_envs, "probability", self.device)
         plant_angles = utils.convert_object_property(plants_across_envs, "angle", self.device)
-        return torch.exp(-torch.abs(plant_angles)) * plant_probability
+        return torch.exp(-torch.abs(plant_angles)*2.0) * plant_probability
 
     def _reward_object_collision(self):
         """Rewards collisions with obstacles, walls and plants.
@@ -283,14 +283,12 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
             if len(self.absolute_plant_locations):
                 for plant_location in self.absolute_plant_locations[env_idx]:
                     distance, angle = utils.get_distance_and_angle(robot_position, robot_orientation, plant_location)
-                    # TODO: use a better way of linking distance to a reduced prediction probability
                     probability = 1.0
                     plants.append(utils.get_object_observation(plant_location, distance, angle, probability, fov_angle))
 
             if len(self.absolute_obstacle_locations):
                 for obstacle_location in self.absolute_obstacle_locations[env_idx]:
                     distance, angle = utils.get_distance_and_angle(robot_position, robot_orientation, obstacle_location)
-                    # TODO: use a better way of linking distance to a reduced prediction probability
                     probability = 1.0
                     obstacles.append(utils.get_object_observation(obstacle_location, distance, angle, probability, fov_angle))
 
@@ -309,7 +307,7 @@ class HighLevelPlantPolicyLeggedRobot(CompatibleLeggedRobot):
             high_level_actions (torch.Tensor): Tensor of shape (num_envs, num_actions_per_env)
         """
         # Here we get high level actions and need to translate them to low level actions
-        # actions are always low_level (dim=12) and high_level_actions are high level (dim=5) # TODO update dims
+        # actions are always low_level (dim=12) and high_level_actions are high level (dim=5)
         """
         # fixed dummy actions for testing
         high_level_actions = torch.zeros_like(high_level_actions, device=self.device)
