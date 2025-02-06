@@ -96,7 +96,7 @@ def calculate_distance(pot_width_pixels):
     """Berechnet die Entfernung anhand der Breite des Topfes in Pixeln."""
     if pot_width_pixels == 0:
         return float('inf')
-    return (real_pot_width_cm * focal_length) / pot_width_pixels
+    return ((real_pot_width_cm * focal_length) / pot_width_pixels)/100
 
 
 def calculate_angle(x_center, image_width):

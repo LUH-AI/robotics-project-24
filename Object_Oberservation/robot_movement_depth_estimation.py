@@ -343,7 +343,7 @@ def main():  # noqa: D103
                     obstacle_avoid_client.Move(0,0,0)
             else:
                 print("Distance: ",closest_pot[0],"ANGLE: ",closest_pot[1])
-                if abs (closest_pot[1]) < 5:
+                if abs (closest_pot[1]) < 3:
                     if closest_pot[0] > 60: #cm
                         #sport_client.Move(1.0,0,0)
                         if not test_not_move_robot:
@@ -354,11 +354,11 @@ def main():  # noqa: D103
                         if not test_not_move_robot:
                             print("Wait for standstill")
                             obstacle_avoid_client.Move(0,0,0)
-                            time.sleep(5)
+                            time.sleep(3)
                             print("STOP BECAUSE TOO CLOSE")
                             print("Move towards plant")
                             sport_client.Move(0.2,0,0)
-                            time.sleep(2)
+                            time.sleep(2.3)
                             print("Wait for watering")
                             obstacle_avoid_client.Move(0,0,0)
                             time.sleep(20)
@@ -372,12 +372,12 @@ def main():  # noqa: D103
                     if closest_pot[1] < 0:#Hier ggf den angle an steering mappen
                         #sport_client.Move(0,0,-1.0)
                         if not test_not_move_robot:
-                            obstacle_avoid_client.Move(0,0,-1.0)
+                            obstacle_avoid_client.Move(0,0,-0.2)
                             print("TURN ROBOT RIGHT")
                     else:
                         #sport_client.Move(0,0,1.0)
                         if not test_not_move_robot:
-                            obstacle_avoid_client.Move(0,0,1.0)
+                            obstacle_avoid_client.Move(0,0,0.2)
                             print("TURN ROBOT LEFT")
             # Bild anzeigen
             cv2.imshow("Erkannte_Objekte", image)
