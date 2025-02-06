@@ -6,6 +6,7 @@ import signal
 import sys
 import time
 
+from PIL import Image
 import cv2
 import numpy as np
 import torch
@@ -22,13 +23,19 @@ from unitree_sdk2py.go2.video.video_client import VideoClient
 from unitree_sdk2py.idl.sensor_msgs.msg.dds_ import PointCloud2_
 from unitree_sdk2py.idl.unitree_go.msg.dds_ import LowState_
 from unitree_sdk2py.idl.unitree_go.msg.dds_ import LowState_
+
+from download import download_model
+from obstacle_tracker import ObstacleTracker
 # from training_code_isaacgym.environments import utils
+# Download des MiDaS-Modell
+download_model("https://github.com/intel-isl/MiDaS/releases/download/v2_1/model-f6b98070.pt", "depth_model.pt")
 
 # from training_code_isaacgym.environments import utils
 
 # Konfiguration
 device = "cuda" if torch.cuda.is_available() else "cpu"
 model_path = "./runs/detect/train/weights/best.pt"  # Pfad zum trainierten YOLO-Modell
+depth_model_path = "./depth_model.pt"  # Pfad zum MiDaS-Modell
 dataset_path = "./Data/Test/Test_plant.v1i.yolov11/test"  # Pfad zum Test-Datensatz
 images_path = os.path.join(dataset_path, "images")
 
@@ -163,6 +170,8 @@ def main():  # noqa: D103
     signal.signal(signal.SIGINT, sigint_handler)
     # YOLO-Modell laden
     model = YOLO(model_path)
+    # Tiefenmodell laden
+    depth_model = ObstacleTracker(depth_model_path, device)
     print("Yolo loaded")
     # *********************
     from actor_critic import ActorCritic
@@ -247,7 +256,7 @@ def main():  # noqa: D103
             # Convert to numpy image
             image_data = np.frombuffer(bytes(data), dtype=np.uint8)
             image = cv2.imdecode(image_data, cv2.IMREAD_COLOR)
-
+            depth = depth_model.estimate_depth(image=Image.fromarray(image))
             # Prediction durchführen
             results = model(image, verbose=False)
             plants = []
@@ -327,8 +336,8 @@ def main():  # noqa: D103
             if viz_dev_images:
                 update_local_map(robot_position, plants, pot_positions)
             # closest_pot
-            print("Angle:",closest_pot[1],"Threshold",3 / 180 * np.pi,"Distance",closest_pot[0])
-            if closest_pot[1] is not None and abs (closest_pot[1]) < 3 / 180 * np.pi and closest_pot[0] <= 0.8:
+            print("Angle:",closest_pot[1],"Threshold",6 / 180 * np.pi,"Distance",closest_pot[0])
+            if closest_pot[1] is not None and abs (closest_pot[1]) < 6 / 180 * np.pi and closest_pot[0] <= 0.8:
                 print("Wait for standstill")
                 obstacle_avoid_client.Move(0,0,0)
                 time.sleep(3)
@@ -356,7 +365,9 @@ def main():  # noqa: D103
 
                 #print(f"{object_detection_output=}")
 
-                observable_depth_information = torch.ones(12)
+                #observable_depth_information = torch.ones(12)
+                observable_depth_information = torch.tensor(depth)
+                
                 object_detection_output = object_detection_output
                 observations = torch.cat([object_detection_output,
                                         observable_depth_information,  # torch.tanh(observable_depth_information),
@@ -367,7 +378,7 @@ def main():  # noqa: D103
                 commands = module.act_inference(observations.float())
                 commands = torch.tanh(commands*0.1) * 0.2
 
-                commands[2]*=2
+                commands[2]*=5
                 high_level_actions_prev2 = high_level_actions_prev1
                 high_level_actions_prev1 = commands
                 print("commands: " + str(commands[0]) + ", " + str(commands[1]) + ", " + str(commands[2]))
