@@ -65,4 +65,4 @@ python -m training_code_isaacgym.play path/to/your/checkpoint.pt
 Additional arguments like `--num_envs` or `--scene` are the same as for the `train.py` script
 
 ## Deployment
-TODO
+To deploy the high-level policy connect the Go2 robot via ethernet to your laptop and execute remotely the `remote_policy_delpoyment.py` script from the `object_observation` directory.
